@@ -1,0 +1,7 @@
+# Generated data artifacts — large and fully reproducible via generate_data.py
+# (seeded/deterministic), so kept out of git. Run the README's steps to regenerate.
+orders.csv
+orders.db
+experiment_data.csv
+__pycache__/
+*.pyc

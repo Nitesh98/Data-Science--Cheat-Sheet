@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<rect width="720" height="420" fill="#fcfcfb"/>
+<text x="70" y="22" font-size="15" font-weight="600" fill="#0b0b0b">Average Cohort Retention Curve</text>
+<text x="70" y="36" font-size="11" fill="#52514e">% of acquisition-month cohort still ordering, by month since acquisition</text>
+<line x1="70" y1="370.0" x2="690" y2="370.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="374.0" font-size="10" fill="#898781" text-anchor="end">0</text>
+<line x1="70" y1="287.5" x2="690" y2="287.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="291.5" font-size="10" fill="#898781" text-anchor="end">28.75</text>
+<line x1="70" y1="205.0" x2="690" y2="205.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="209.0" font-size="10" fill="#898781" text-anchor="end">57.5</text>
+<line x1="70" y1="122.5" x2="690" y2="122.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="126.5" font-size="10" fill="#898781" text-anchor="end">86.25</text>
+<line x1="70" y1="40.0" x2="690" y2="40.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="44.0" font-size="10" fill="#898781" text-anchor="end">115</text>
+<rect x="89.9" y="83.0" width="48.7" height="287.0" rx="3" fill="#2a78d6"/>
+<text x="114.3" y="77.0" font-size="10" fill="#52514e" text-anchor="middle">100</text>
+<text x="114.3" y="386" font-size="10" fill="#898781" text-anchor="middle">M0</text>
+<rect x="178.5" y="274.6" width="48.7" height="95.4" rx="3" fill="#2a78d6"/>
+<text x="202.9" y="268.6" font-size="10" fill="#52514e" text-anchor="middle">33.2417</text>
+<text x="202.9" y="386" font-size="10" fill="#898781" text-anchor="middle">M1</text>
+<rect x="267.1" y="312.6" width="48.7" height="57.4" rx="3" fill="#2a78d6"/>
+<text x="291.4" y="306.6" font-size="10" fill="#52514e" text-anchor="middle">19.9859</text>
+<text x="291.4" y="386" font-size="10" fill="#898781" text-anchor="middle">M2</text>
+<rect x="355.6" y="329.5" width="48.7" height="40.5" rx="3" fill="#2a78d6"/>
+<text x="380.0" y="323.5" font-size="10" fill="#52514e" text-anchor="middle">14.1106</text>
+<text x="380.0" y="386" font-size="10" fill="#898781" text-anchor="middle">M3</text>
+<rect x="444.2" y="339.3" width="48.7" height="30.7" rx="3" fill="#2a78d6"/>
+<text x="468.6" y="333.3" font-size="10" fill="#52514e" text-anchor="middle">10.6906</text>
+<text x="468.6" y="386" font-size="10" fill="#898781" text-anchor="middle">M4</text>
+<rect x="532.8" y="345.5" width="48.7" height="24.5" rx="3" fill="#2a78d6"/>
+<text x="557.1" y="339.5" font-size="10" fill="#52514e" text-anchor="middle">8.55059</text>
+<text x="557.1" y="386" font-size="10" fill="#898781" text-anchor="middle">M5</text>
+<rect x="621.4" y="348.1" width="48.7" height="21.9" rx="3" fill="#2a78d6"/>
+<text x="645.7" y="342.1" font-size="10" fill="#52514e" text-anchor="middle">7.63989</text>
+<text x="645.7" y="386" font-size="10" fill="#898781" text-anchor="middle">M6</text>
+<line x1="70" y1="370.0" x2="690" y2="370.0" stroke="#c3c2b7" stroke-width="1.5"/>
+</svg>
