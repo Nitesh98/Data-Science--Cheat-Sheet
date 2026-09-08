@@ -1,0 +1,44 @@
+{
+  "total_revenue_y1": 121447184,
+  "total_revenue_y2": 211126850,
+  "yoy_revenue_growth_pct": 73.8,
+  "discount_elasticity_beta": 2.559,
+  "discount_elasticity_r2": 0.145,
+  "elasticity_pct_lift_per_10pt_discount": 29.2,
+  "elasticity_n_category_months": 120,
+  "retention_month1_pct": 33.2,
+  "retention_month6_pct": 7.6,
+  "channel_revenue": {
+    "Organic/Direct": 127357459,
+    "Email/CRM": 64018473,
+    "Paid Search": 63791449,
+    "Paid Social": 53684950,
+    "Affiliate": 23721703
+  },
+  "channel_new_customer_pct": {
+    "Organic/Direct": 34.3,
+    "Email/CRM": 18.7,
+    "Paid Search": 65.6,
+    "Paid Social": 65.0,
+    "Affiliate": 60.6
+  },
+  "city_tier_growth_pct": {
+    "Tier 1": 72.4,
+    "Tier 2": 74.7,
+    "Tier 3": 75.2
+  },
+  "city_tier_revenue": {
+    "Tier 1": [
+      51797870,
+      89307485
+    ],
+    "Tier 2": [
+      43533091,
+      76067228
+    ],
+    "Tier 3": [
+      26116223,
+      45752137
+    ]
+  }
+}

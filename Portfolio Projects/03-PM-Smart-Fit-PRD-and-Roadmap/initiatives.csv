@@ -1,0 +1,8 @@
+initiative,reach_k_users_per_month,impact,confidence,effort_person_months,source_note
+Smart Size & Fit Recommendation (MVP badge),180,2,0.6,3.0,"PRD this doc; return-rate gap sized in Project 01 (Formal Shoes 14% vs ~5-10% baseline)"
+Scoped scarcity messaging rollout (low-stock threshold + size-guide prompt),60,1,0.8,0.75,"Project 02 A/B test result: real data, not an estimate -- primary metric win with a guardrail regression needing this scoping"
+Post-purchase lifecycle campaign to fix month-1 retention drop,250,2,0.4,2.0,"Project 01 cohort analysis: 100% -> 33.2% month-1 drop is the single largest retention lever found, but untested -- no experiment run yet"
+Return-reason structured tagging at intake (data foundation),0,3,0.9,2.5,"Blocking dependency for the PRD above -- internal/enabling work, reach modeled as category-wide downstream enablement rather than direct user reach"
+Reallocate growth budget toward Paid Search/Social,300,1,0.7,0.25,"Project 01 channel analysis: those channels carry 60-66% new-customer share vs Organic's 34% -- budget-only change, no eng"
+Tier 3 city fulfillment & logistics investment,150,2,0.35,6.0,"Project 01: Tier 3 grew fastest YoY (+75.2%) among city tiers, but causal driver unconfirmed and effort is largely ops/infra, not product"
+Redesign discount calendar to reduce non-festive over-discounting,300,1,0.2,0.5,"Project 01 elasticity finding, but flagged there as confounded with seasonality -- low confidence until a clean causal test exists"

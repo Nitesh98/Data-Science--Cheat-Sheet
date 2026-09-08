@@ -17,6 +17,19 @@ programming) to experiment: small scripts, exercises, and examples while
 learning. Feel free to add to it, but keep experiments contained here
 rather than scattered into the topic folders above.
 
+## `Portfolio Projects/`
+
+Resume/interview portfolio work for the repo owner (Manager, Analytics —
+Revenue & Growth, men's footwear category at Myntra), aimed at a Senior
+Manager Analytics promotion case or a Product Management pivot. Three
+connected case studies (category growth diagnostic, an A/B test, a PM
+PRD+roadmap) using **synthetic, seeded data only** — never real company
+data. Python 3 standard library only (no pandas/numpy/matplotlib/scipy —
+this environment has no package-install access, so `svg_charts.py` and
+`stats_lib.py` at that folder's root hand-implement charts and statistical
+tests, shared across the three subprojects). See its own `README.md` for
+the full map and how to run everything.
+
 ## Conventions
 
 - Topic folders use Title Case with spaces (e.g. `Data Visualization`,
