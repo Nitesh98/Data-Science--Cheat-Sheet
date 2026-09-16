@@ -47,6 +47,13 @@ One line to adapt for a Projects-section header, whichever length fits:
   first principles in an environment with no access to standard data
   science libraries, validating each implementation against known
   reference values before using it to drive a business recommendation.
+- Followed up a confounded discount-elasticity finding with a
+  difference-in-differences design isolating a discount event from
+  seasonal demand, recovering a materially smaller, more defensible
+  effect size — and used a permutation test rather than classical
+  standard errors given only four comparison groups, explicitly stating
+  the resulting significance test's own detection limit rather than
+  overstating it.
 
 ## For a Product Management pivot — style resume
 

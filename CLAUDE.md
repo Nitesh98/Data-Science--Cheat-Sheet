@@ -21,14 +21,15 @@ rather than scattered into the topic folders above.
 
 Resume/interview portfolio work for the repo owner (Manager, Analytics —
 Revenue & Growth, men's footwear category at Myntra), aimed at a Senior
-Manager Analytics promotion case or a Product Management pivot. Three
+Manager Analytics promotion case or a Product Management pivot. Four
 connected case studies (category growth diagnostic, an A/B test, a PM
-PRD+roadmap) using **synthetic, seeded data only** — never real company
-data. Python 3 standard library only (no pandas/numpy/matplotlib/scipy —
-this environment has no package-install access, so `svg_charts.py` and
-`stats_lib.py` at that folder's root hand-implement charts and statistical
-tests, shared across the three subprojects). See its own `README.md` for
-the full map and how to run everything.
+PRD+roadmap, and a causal DiD follow-up to project 01's confounded
+elasticity finding) using **synthetic, seeded data only** — never real
+company data. Python 3 standard library only (no pandas/numpy/matplotlib/
+scipy — this environment has no package-install access, so `svg_charts.py`
+and `stats_lib.py` at that folder's root hand-implement charts and
+statistical tests, shared across the subprojects). See its own `README.md`
+for the full map and how to run everything.
 
 ## Conventions
 
