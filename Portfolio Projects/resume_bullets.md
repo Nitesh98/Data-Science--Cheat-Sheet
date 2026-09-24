@@ -54,6 +54,13 @@ One line to adapt for a Projects-section header, whichever length fits:
   standard errors given only four comparison groups, explicitly stating
   the resulting significance test's own detection limit rather than
   overstating it.
+- Built a paired Monte Carlo simulation comparing three commercial/
+  inventory-control models (marketplace, owned retail, sale-or-return) for
+  a footwear category, feeding a prior causal elasticity estimate into a
+  live buying decision; the analysis revised its own headline
+  recommendation once loss-probability and risk-adjusted return were
+  weighed against raw expected profit, rather than stopping at the
+  highest-expected-value answer.
 
 ## For a Product Management pivot — style resume
 
@@ -71,3 +78,8 @@ One line to adapt for a Projects-section header, whichever length fits:
   highest confidence score in the prioritization model, demonstrating how
   experimentation discipline should inform — not just follow — product
   prioritization.
+- Modeled a three-way commercial-model decision (marketplace vs. owned
+  retail vs. sale-or-return) as a risk-return tradeoff rather than a single
+  "best" answer, translating simulation output into a segmentation rule
+  (which model fits which brand/category risk profile) a cross-functional
+  team could actually act on.

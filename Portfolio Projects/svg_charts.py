@@ -4,8 +4,9 @@ projects. No matplotlib/pandas available in this environment, so charts are
 hand-built SVG -- following the house palette (see dataviz skill reference)
 for readability and colorblind-safe categorical colors.
 
-Only two chart types are implemented: a multi-series line chart and a
-grouped/simple bar chart. That covers every chart used in these projects.
+Three chart types are implemented: a multi-series line chart, a simple bar
+chart, and a grouped bar chart (multiple series side by side per category).
+That covers every chart used in these projects.
 """
 
 # Palette (validated categorical order; light-surface only -- static assets
@@ -129,6 +130,70 @@ def bar_chart(labels, values, title, subtitle="", filename=None, color=None, hig
         svg.append(f'<text x="{x + bar_w/2:.1f}" y="{H - PAD_B + 16}" font-size="10" fill="{INK_MUTED}" text-anchor="middle">{lab}</text>')
 
     svg.append(f'<line x1="{PAD_L}" y1="{zero_y:.1f}" x2="{W - PAD_R}" y2="{zero_y:.1f}" stroke="{BASELINE}" stroke-width="1.5"/>')
+    svg.append("</svg>")
+    out = "\n".join(svg)
+    if filename:
+        with open(filename, "w") as f:
+            f.write(out)
+    return out
+
+
+def grouped_bar_chart(categories, series, title, subtitle="", filename=None, value_fmt=None):
+    """categories: list of category labels (x-axis groups).
+    series: dict[series_name] -> list of values, one per category (same order/length).
+    Draws each series as an adjacent bar within each category's band, with a legend."""
+    value_fmt = value_fmt or _fmt
+    names = list(series.keys())
+    all_vals = [v for vals in series.values() for v in vals]
+    vmin, vmax = min(0, min(all_vals)), max(all_vals) * 1.15
+
+    plot_w = W - PAD_L - PAD_R
+    plot_h = H - PAD_T - PAD_B
+    n = len(categories)
+    band = plot_w / n
+    group_w = band * 0.78
+    bar_w = group_w / len(names)
+
+    def py(v):
+        return PAD_T + plot_h - _scale(v, vmin, vmax, 0, plot_h)
+
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
+           f'viewBox="0 0 {W} {H}" font-family="{FONT}">']
+    svg.append(f'<rect width="{W}" height="{H}" fill="{SURFACE}"/>')
+    svg.append(f'<text x="{PAD_L}" y="22" font-size="15" font-weight="600" fill="{INK_PRIMARY}">{title}</text>')
+    if subtitle:
+        svg.append(f'<text x="{PAD_L}" y="36" font-size="11" fill="{INK_SECONDARY}">{subtitle}</text>')
+
+    for i in range(5):
+        v = vmin + (vmax - vmin) * i / 4
+        y = py(v)
+        svg.append(f'<line x1="{PAD_L}" y1="{y:.1f}" x2="{W - PAD_R}" y2="{y:.1f}" stroke="{GRIDLINE}" stroke-width="1"/>')
+        svg.append(f'<text x="{PAD_L - 8}" y="{y+4:.1f}" font-size="10" fill="{INK_MUTED}" text-anchor="end">{_fmt(v)}</text>')
+
+    zero_y = py(0)
+    for ci, cat in enumerate(categories):
+        group_x = PAD_L + ci * band + (band - group_w) / 2
+        for si, name in enumerate(names):
+            v = series[name][ci]
+            color = SERIES[si % len(SERIES)]
+            x = group_x + si * bar_w
+            y = py(v)
+            h = abs(zero_y - y)
+            top = min(y, zero_y)
+            svg.append(f'<rect x="{x:.1f}" y="{top:.1f}" width="{bar_w*0.85:.1f}" height="{max(h,1):.1f}" rx="2" fill="{color}"/>')
+            svg.append(f'<text x="{x + bar_w*0.42:.1f}" y="{top - 5:.1f}" font-size="9" fill="{INK_SECONDARY}" text-anchor="middle">{value_fmt(v)}</text>')
+        svg.append(f'<text x="{group_x + group_w/2:.1f}" y="{H - PAD_B + 16}" font-size="10" fill="{INK_MUTED}" text-anchor="middle">{cat}</text>')
+
+    svg.append(f'<line x1="{PAD_L}" y1="{zero_y:.1f}" x2="{W - PAD_R}" y2="{zero_y:.1f}" stroke="{BASELINE}" stroke-width="1.5"/>')
+
+    # legend
+    lx = PAD_L
+    for si, name in enumerate(names):
+        color = SERIES[si % len(SERIES)]
+        svg.append(f'<rect x="{lx:.1f}" y="{PAD_T - 26}" width="10" height="10" rx="2" fill="{color}"/>')
+        svg.append(f'<text x="{lx+14:.1f}" y="{PAD_T - 17}" font-size="10" fill="{INK_SECONDARY}">{name}</text>')
+        lx += 16 + 7 * len(name) + 14
+
     svg.append("</svg>")
     out = "\n".join(svg)
     if filename:
