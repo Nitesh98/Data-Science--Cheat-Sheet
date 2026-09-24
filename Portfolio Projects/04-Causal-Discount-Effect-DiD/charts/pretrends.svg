@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+<rect width="720" height="420" fill="#fcfcfb"/>
+<text x="70" y="22" font-size="15" font-weight="600" fill="#0b0b0b">Pre-Period Trends (Jan=100)</text>
+<text x="70" y="36" font-size="11" fill="#52514e">Sneakers (treated) vs. controls -- checking the DiD parallel-trends assumption</text>
+<line x1="70" y1="370.0" x2="690" y2="370.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="374.0" font-size="10" fill="#898781" text-anchor="end">0</text>
+<line x1="70" y1="287.5" x2="690" y2="287.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="291.5" font-size="10" fill="#898781" text-anchor="end">27.5</text>
+<line x1="70" y1="205.0" x2="690" y2="205.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="209.0" font-size="10" fill="#898781" text-anchor="end">55</text>
+<line x1="70" y1="122.5" x2="690" y2="122.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="126.5" font-size="10" fill="#898781" text-anchor="end">82.5</text>
+<line x1="70" y1="40.0" x2="690" y2="40.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="62" y="44.0" font-size="10" fill="#898781" text-anchor="end">110</text>
+<text x="70.0" y="388" font-size="10" fill="#898781" text-anchor="middle">2024-01</text>
+<text x="276.7" y="388" font-size="10" fill="#898781" text-anchor="middle">2024-02</text>
+<text x="483.3" y="388" font-size="10" fill="#898781" text-anchor="middle">2024-03</text>
+<text x="690.0" y="388" font-size="10" fill="#898781" text-anchor="middle">2024-04</text>
+<polyline points="70.0,70.0 276.7,135.5 483.3,126.1 690.0,119.9" fill="none" stroke="#2a78d6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="690.0" cy="119.9" r="3.5" fill="#2a78d6"/>
+<text x="698.0" y="123.9" font-size="11" fill="#2a78d6" font-weight="600">Casual Shoes</text>
+<polyline points="70.0,70.0 276.7,119.4 483.3,106.1 690.0,112.9" fill="none" stroke="#eb6834" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="690.0" cy="112.9" r="3.5" fill="#eb6834"/>
+<text x="698.0" y="116.9" font-size="11" fill="#eb6834" font-weight="600">Formal Shoes</text>
+<polyline points="70.0,70.0 276.7,149.9 483.3,139.9 690.0,132.8" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="690.0" cy="132.8" r="3.5" fill="#1baf7a"/>
+<text x="698.0" y="136.8" font-size="11" fill="#1baf7a" font-weight="600">Sandals & Floaters</text>
+<polyline points="70.0,70.0 276.7,136.8 483.3,108.9 690.0,133.5" fill="none" stroke="#eda100" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="690.0" cy="133.5" r="3.5" fill="#eda100"/>
+<text x="698.0" y="137.5" font-size="11" fill="#eda100" font-weight="600">Sneakers</text>
+<polyline points="70.0,70.0 276.7,132.2 483.3,137.8 690.0,128.6" fill="none" stroke="#e87ba4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="690.0" cy="128.6" r="3.5" fill="#e87ba4"/>
+<text x="698.0" y="132.6" font-size="11" fill="#e87ba4" font-weight="600">Sports Shoes</text>
+<line x1="70" y1="370" x2="690" y2="370" stroke="#c3c2b7" stroke-width="1.5"/>
+</svg>
