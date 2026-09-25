@@ -17,6 +17,7 @@ Each agent also has an OFFLINE stand-in: simple rules over the same tools, so
 reason far better -- the offline path exists to test the plumbing and to show
 you the raw facts the LLM agents start from.
 """
+import re
 from datetime import timedelta
 
 import config
@@ -130,7 +131,7 @@ Use ONLY numbers present in the findings. If the Reviewer sent issues, fix every
         "title": "Reviewer",
         "tools": ["get_pva", "gmv_bridge", "pricing_check", "intraday_by_hour", "merch_health", "merch_by_hour",
                   "estimate_elasticity", "simulate_rebate", "price_scan", "month_landing", "restore_to_plan",
-                  "action_coverage", "run_sql"],
+                  "action_coverage", "rebate_status", "weekly_trend", "brand_scorecard", "run_sql"],
         "effort": "high",
         "system": CONTEXT + """
 YOUR JOB: you are the numbers checker before this goes to leadership. Re-run the tools and verify EVERY number,
@@ -305,3 +306,109 @@ def offline_reviewer(draft):
 
 OFFLINE = {"monitor": offline_monitor, "funnel": offline_funnel, "pricing": offline_pricing, "merch": offline_merch,
            "rebate": offline_rebate, "pricing_opt": offline_pricing_opt, "planner": offline_planner}
+
+
+# ===========================================================================
+# PERIODIC PACKS (run_packs.py): Brand Planner + Monthly Review Writer
+# ===========================================================================
+AGENTS["brand_planner"] = {
+    "title": "Brand Planner",
+    "tools": ["brand_scorecard", "weekly_trend", "get_pva", "gmv_bridge", "merch_health", "intraday_by_hour", "restore_to_plan"],
+    "effort": "high",
+    "system": CONTEXT + """
+YOUR JOB: write the BRAND-PARTNER PACK for one brand -- a document we SHARE WITH THE BRAND -- plus a short internal cover note
+for the category manager. Start with brand_scorecard. Always pass filters={"brand": <brand>} to other tools.
+brand_pack (markdown, shareable): headline; scorecard table (plan, actual, PvA, share of category); weekly trend; funnel vs
+category PvA (category-level benchmarks are fine); article-type view; availability & new season; what's working / not;
+JOINT ACTION PLAN (asks of the brand + our commitments, each with expected rest-of-month GMV from restore_to_plan where possible);
+next-month focus.
+HARD RULE for brand_pack: use only the scorecard's 'shareable' data. NEVER mention GM, margin, commission, rebate budgets,
+elasticity, or ANY other brand by name or number.
+internal_note (markdown, for us only): GM view, rebate/price stance, negotiation points, risks.
+Then call submit_brand_pack.""",
+}
+AGENTS["monthly"] = {
+    "title": "Monthly Review Writer",
+    "tools": ["weekly_trend", "gmv_bridge", "get_pva", "month_landing", "pricing_check", "merch_health",
+              "rebate_status", "estimate_elasticity", "restore_to_plan"],
+    "effort": "high",
+    "system": CONTEXT + """
+YOUR JOB: the monthly business review deck for leadership (month to date). Write it as slides in markdown:
+'## Slide N: <title>' each with 3-5 bullets (so-what first) and, where useful, one small table, plus a
+'> Speaker notes:' line. Slides: 1 headline & asks; 2 KPI scorecard (GMV, GM, sessions, conversion, ASP, discount vs plan);
+3 weekly trend (what changed when); 4 GMV bridge; 5 brand performance (top/bottom by INR gap); 6 pricing & rebates (GMV vs GM);
+7 supply & new season; 8 month landing & recovery actions (INR each); 9 next month: risks, decisions needed.
+Then call submit_document.""",
+}
+SUBMIT_BRAND_PACK = {
+    "name": "submit_brand_pack", "description": "Hand in the brand-partner pack and the internal cover note.",
+    "input_schema": {"type": "object", "properties": {"brand_pack": {"type": "string"}, "internal_note": {"type": "string"}},
+                     "required": ["brand_pack", "internal_note"]},
+}
+SUBMIT_DOCUMENT = {
+    "name": "submit_document", "description": "Hand in the finished document.",
+    "input_schema": {"type": "object", "properties": {"markdown": {"type": "string"}}, "required": ["markdown"]},
+}
+
+INTERNAL_TERMS = {"GM": r"\bgm\b", "margin": r"\bmargins?\b", "commission": r"\bcommission",
+                  "rebate budget": r"\brebate budget", "elasticity": r"\belasticit", "COGS": r"\bcogs\b"}
+
+
+def leak_check(text, brand):
+    """Deterministic safety net for anything shared outside the company: no internal
+    economics and no other brand's name. Runs on every brand pack, LLM or not."""
+    low = text.lower()
+    issues = [f"mentions internal term '{name}'" for name, rx in INTERNAL_TERMS.items() if re.search(rx, low)]
+    others = [r["brand"] for r in tools._query("SELECT DISTINCT brand FROM dim_style") if r["brand"] != brand]
+    issues += [f"mentions another brand: {b}" for b in others if re.search(r"\b" + re.escape(b.lower()) + r"\b", low)]
+    return issues
+
+
+def offline_brand_pack(brand):
+    import action_tools as A
+    import pack_tools
+    sc = pack_tools.brand_scorecard(brand)
+    s, i = sc["shareable"], sc["internal_only"]
+    f = s["funnel_pva"]
+    lines = [f"# {brand} x Footwear -- partner review ({config.AS_OF_DATE:%B %Y}, MTD) [offline rule-based draft]", "",
+             "| | Plan | Actual | PvA | Share of category |", "|---|---|---|---|---|",
+             f"| GMV | {inr(s['gmv']['plan'])} | {inr(s['gmv']['actual'])} | {s['gmv']['pva']:.1%} | {s['share_of_category_gmv']:.1%} |", "",
+             "## Weekly trend", "", "| Week | GMV PvA | Sessions PvA | Conversion PvA | ASP PvA |", "|---|---|---|---|---|"]
+    lines += [f"| {w['week']} | {w['gmv_pva']:.1%} | {w['sessions_pva']:.1%} | {w['conversion_pva']:.1%} | {w['asp_pva']:.1%} |" for w in s["weekly"]]
+    lines += ["", "## Funnel vs plan", "", ", ".join(f"{k} {v:.1%}" for k, v in f.items()), "",
+              "## Availability", ""]
+    lines += [f"- {x['article_type']}: size availability {x['size_availability']:.0%}, new season {x['new_season_share']:.0%}"
+              + (f" -- {'; '.join(x['flags'])}" if x["flags"] else "") for x in s["supply"]]
+    lines += [f"- RIGHT NOW {x['article_type']}: size availability {x['size_availability']:.0%}" for x in s["supply_right_now"] if x["flags"]]
+    lines += ["", "## Joint action plan", ""]
+    for x in s["supply_right_now"]:
+        if x["flags"]:
+            r = A.restore_to_plan("consideration", {"brand": brand, "article_type": x["article_type"]}, "intraday")
+            lines.append(f"- Brand: replenish sizes in {x['article_type']} -- worth ~{inr(r['gmv_recovered_if_restored_inr'])} GMV rest of month")
+    lines.append("- Us: restore traffic in Tier-2/3 app campaigns")
+    pack = "\n".join(lines)
+    note = (f"# Internal note -- {brand}\n\n- GM PvA {i['gm_pva']:.1%} (GM% {i['gm_pct_actual']:.1%} vs plan {i['gm_pct_plan']:.1%})\n"
+            f"- Fitted elasticity {i['elasticity_pct_per_pp']}%/pp (r2 {i['elasticity_r2']})\n"
+            + (f"- Rebate: spent {inr(i['rebate']['spent_mtd_inr'])} of {inr(i['rebate']['budget_inr'])}\n" if i.get("rebate") else ""))
+    return {"brand_pack": pack, "internal_note": note}
+
+
+def offline_monthly():
+    import action_tools as A
+    import pack_tools
+    mtd = tools.get_pva("mtd")["rows"][0]
+    m = mtd["metrics"]
+    br = tools.gmv_bridge("mtd")
+    land = A.month_landing()["category"]
+    brands = tools.get_pva("mtd", "brand")["rows"]
+    out = [f"# Footwear monthly review -- {config.AS_OF_DATE:%B %Y} (MTD) [offline rule-based draft]", "",
+           "## Slide 1: Headline", f"- GMV {m['gmv']['pva']:.1%} of plan MTD ({cr(mtd['gmv_gap_inr'])}); GM {m['gm']['pva']:.1%}",
+           f"- Month lands ~{land['landing_pva']:.1%} of MoP on run-rate", "",
+           "## Slide 2: KPI scorecard", "", "| Metric | PvA |", "|---|---|"]
+    out += [f"| {k} | {m[k]['pva']:.1%} |" for k in ("gmv", "gm", "sessions", "conversion", "asp")]
+    out += ["", "## Slide 3: Weekly trend", "", "| Week | GMV PvA | Sessions PvA | Conversion PvA |", "|---|---|---|---|"]
+    out += [f"| {w['week']} | {w['gmv_pva']:.1%} | {w['sessions_pva']:.1%} | {w['conversion_pva']:.1%} |" for w in pack_tools.weekly_trend()["weeks"]]
+    out += ["", "## Slide 4: GMV bridge", ""] + [f"- {g}: {cr(v)}" for g, v in br["summary_by_group"].items()]
+    out += ["", "## Slide 5: Brands (by INR gap)", ""] + [f"- {r['group']}: {r['metrics']['gmv']['pva']:.1%} ({cr(r['gmv_gap_inr'])})" for r in brands]
+    out += ["", "## Slide 6-9", "", "(Pricing, supply, landing and next-month slides need the LLM agent -- run without --offline.)"]
+    return "\n".join(out)

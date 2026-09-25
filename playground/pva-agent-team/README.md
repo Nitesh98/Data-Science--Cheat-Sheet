@@ -53,6 +53,41 @@ and a normal workflow where it is.
 The LLM decides *which* slice to look at and *what it means*, and the tool does the math. That is also
 what lets the Reviewer check the Writer: it re-runs the same tool and compares.
 
+## Periodic packs and the dashboard
+
+The same tools and Reviewer also power jobs you run weekly or monthly rather than daily.
+
+```bash
+python3 run_packs.py --brand Vantage     # brand-partner pack + internal cover note
+python3 run_packs.py --brand all         # one per brand
+python3 run_packs.py --monthly           # monthly business review, slide by slide, with speaker notes
+python3 run_packs.py --approve           # after reading out/<date>/packs/draft/
+python3 dashboard.py                     # out/<date>/dashboard.html: open in a browser (no LLM)
+```
+
+(Add `--offline` to either `run_packs.py` command to use the rule-based stand-ins.)
+
+| Agent | Writes | Tools |
+|---|---|---|
+| **Brand Planner** | A **brand-partner pack we share with the brand**: scorecard, weekly trend, funnel vs category, availability, joint action plan with ₹ per action, next-month focus. Plus an **internal cover note** for you (GM view, rebate/price stance, negotiation points). | `brand_scorecard`, `weekly_trend`, `get_pva`, `gmv_bridge`, `merch_health`, `intraday_by_hour`, `restore_to_plan` |
+| **Monthly Review Writer** | The leadership review as 9 slides of bullets, tables and speaker notes | `weekly_trend`, `gmv_bridge`, `get_pva`, `month_landing`, `pricing_check`, `merch_health`, `rebate_status`, `estimate_elasticity`, `restore_to_plan` |
+
+**Brand packs leave the company, so there are two guards.** `brand_scorecard` splits its output into
+`shareable` and `internal_only`, and the prompt says to use only the first. Then, on every pack,
+`leak_check()` (plain code, not an LLM) looks for GM, margin, commission, rebate budget, elasticity,
+COGS and any other brand's name. If it finds one, the pack goes back to the author, **even if the LLM
+Reviewer approved it.** For anything that goes outside the company, don't rely on the model alone.
+
+**The dashboard** is built straight from the tools, with no LLM:
+
+- KPI tiles: MTD, today, and month landing.
+- Daily GMV vs plan.
+- The GMV gap by funnel step, in rupees.
+- Today hour by hour: the category vs the worst slice, next to that slice's size availability.
+- Weekly trend and brand tables.
+
+It has hover tooltips, a light/dark toggle, and a "Show data" table under every chart, and it works on a phone.
+
 ## The funnel (the KPI tree the agents use)
 
 ```
@@ -148,7 +183,10 @@ A full run makes roughly 30–60 API calls on `claude-opus-5`. To try it cheaply
 | `action_tools.py` | Action tools: the projection engine, elasticity fit, rebate status / simulate / optimise, price scan, month landing, re-phasing, restore-to-plan, action coverage |
 | `llm.py` | The agent loop, with the SDK or the urllib fallback |
 | `agents.py` | Each agent's job description and tool list, plus the offline stand-ins |
-| `run_team.py` | The orchestrator and the approval step |
+| `run_team.py` | The daily review orchestrator and the approval step |
+| `pack_tools.py` | Pack tools: `brand_scorecard` (shareable vs internal), `weekly_trend` |
+| `run_packs.py` | Brand-partner packs and the monthly review: author → Reviewer + `leak_check` → you |
+| `dashboard.py` | The HTML dashboard |
 
 ## Roadmap: the rest of your job, as agents
 
@@ -157,11 +195,11 @@ Built on the same pattern: tools do the math, agents do the reasoning, the Revie
 | Next agent | Would do | New tools it needs |
 |---|---|---|
 | **AOP Builder** | Build next year's AOP → MoP → DoD from history, seasonality and growth targets. The re-phasing half is already done by the Plan & Landing Analyst. | `build_aop`, seasonality fit |
-| **Brand Planner** | Brand-level plans and brand-partner performance packs | `brand_pack` |
-| **Monthly Review Pack** | Monthly KPI tables, commentary and deck bullets | reuse all tools + a deck writer |
-| **Dashboard Builder** | Turn the recurring queries in `queries.sql` into dashboard specs | — |
+| **Team Coach** | Your team-handling work: turn review findings into weekly analyst task lists and 1:1 notes | task tracker |
+| **Scheduler** | Run the daily review every morning and post the approved Slack note | a scheduled job + Slack connector |
 
-✅ Built so far: **Merchandising Analyst**, **MP Rebate Allocator**, **OR/SOR Pricing Optimizer**, **Plan & Landing Analyst**.
+✅ Built so far: **Merchandising Analyst**, **MP Rebate Allocator**, **OR/SOR Pricing Optimizer**, **Plan & Landing Analyst**,
+**Brand Planner**, **Monthly Review Writer**, **dashboard**.
 
 Good next exercise: change `REBATE_TOPUP_INR` in `config.py`, or an elasticity in `data.py`
 (e.g. make Trekko 5.0), and see whether the Rebate Allocator changes its mind.

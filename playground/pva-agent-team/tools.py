@@ -117,7 +117,8 @@ def _aggregate(period, group_by=None, filters=None):
         out.setdefault(key(r), {})["plan"] = r
     for r in actual:
         out.setdefault(key(r), {})["actual"] = r
-    return {" / ".join(map(str, k)): v for k, v in out.items() if "actual" in v and "plan" in v}
+    return {" / ".join(map(str, k)): v for k, v in out.items()
+            if "actual" in v and "plan" in v and v["actual"]["sessions"]}     # skip empty slices (e.g. a typo'd brand)
 
 
 def _derive(t):
@@ -429,12 +430,14 @@ _FUNCS = {"get_pva": get_pva, "gmv_bridge": gmv_bridge, "intraday_by_hour": intr
 
 
 def _register_action_tools():
-    """Forward-looking ACTION tools live in action_tools.py (which imports this module),
+    """ACTION tools (action_tools.py) and PACK tools (pack_tools.py) import this module,
     so they are registered on first use rather than at import time."""
     if "month_landing" not in _FUNCS:
         import action_tools
-        TOOL_SPECS.update(action_tools.SPECS)
-        _FUNCS.update(action_tools.FUNCS)
+        import pack_tools
+        for mod in (action_tools, pack_tools):
+            TOOL_SPECS.update(mod.SPECS)
+            _FUNCS.update(mod.FUNCS)
 
 
 def tool_definitions(names):
