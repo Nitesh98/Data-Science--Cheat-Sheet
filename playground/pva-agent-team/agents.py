@@ -103,7 +103,7 @@ rest-of-month GMV and GM deltas. Say explicitly if a price change was the RIGHT 
     },
     "planner": {
         "title": "Plan & Landing Analyst",
-        "tools": ["month_landing", "rephase_plan", "restore_to_plan", "action_coverage"],
+        "tools": ["month_landing", "rephase_plan", "restore_to_plan", "action_coverage", "merch_health"],
         "effort": "high",
         "system": CONTEXT + """
 YOUR JOB: the month-end view. 1) month_landing: where GMV lands vs MoP on current run-rate (note the run-rate is the last
@@ -208,8 +208,8 @@ def offline_pricing():
     for b in tools.pricing_check("mtd")["brands"]:
         if abs(b["discount_diff_pp"]) < 1:
             continue
-        lever = "rebate" if b["commercial_model"] == "MP" else "discount"
-        lines.append(f"- {b['brand']} ({b['commercial_model']}): {lever} {b['discount_diff_pp']:+.1f}pp vs plan -> "
+        lever = "our rebate" if b["commercial_model"] == "MP" else "our price"
+        lines.append(f"- {b['brand']} ({b['commercial_model']}, lever: {lever}): discount {b['discount_diff_pp']:+.1f}pp vs plan -> "
                      f"consideration PvA {b['consideration_pva']:.1%}, GMV PvA {b['gmv_pva']:.1%}, GM PvA {b['gm_pva']:.1%}")
     return "\n".join(lines) or "No brand's discount moved more than 1pp vs plan."
 
@@ -284,14 +284,16 @@ def offline_planner():
 
 
 def offline_writer(findings, issues=None):
-    mtd = tools.get_pva("mtd")["rows"][0]
-    intr = tools.get_pva("intraday")["rows"][0]
+    """The Writer has NO tools: every number must come from the findings it was handed."""
+    first = lambda title, pat="": next((l.strip("*- ").replace("**", "") for l in findings.get(title, "").splitlines()
+                                        if pat in l), "")
+    actions = [l.strip("- ") for l in findings.get("Plan & Landing Analyst", "").splitlines() if l.startswith("- ")]
     slack = "\n".join([
-        f"*Footwear PvA {config.AS_OF_DATE}*: MTD GMV {mtd['metrics']['gmv']['pva']:.1%} | intraday {intr['metrics']['gmv']['pva']:.1%}",
-        f"Gap: MTD {cr(mtd['gmv_gap_inr'])}, today so far {cr(intr['gmv_gap_inr'])}",
-        "Reasons: see bridge -- (offline mode: rule-based, run with an API key for real reasoning)",
-        "Actions: TBD by analyst",
-        "Ask: review exec summary",
+        f"*Footwear PvA {config.AS_OF_DATE}*: " + first("PvA Monitor", "**MTD**"),
+        "Today: " + first("PvA Monitor", "**INTRADAY**"),
+        "Reasons: " + first("Funnel Analyst", "MTD gap"),
+        "Actions: " + "; ".join(actions[:3]),
+        "Ask: " + first("MP Rebate Allocator", "Top-up") + " | " + first("Plan & Landing Analyst", "Landing"),
     ])
     summary = "# Footwear PvA review (OFFLINE rule-based draft)\n\n" + "\n\n".join(
         f"## {t}\n\n{f}" for t, f in findings.items())
@@ -412,3 +414,58 @@ def offline_monthly():
     out += ["", "## Slide 5: Brands (by INR gap)", ""] + [f"- {r['group']}: {r['metrics']['gmv']['pva']:.1%} ({cr(r['gmv_gap_inr'])})" for r in brands]
     out += ["", "## Slide 6-9", "", "(Pricing, supply, landing and next-month slides need the LLM agent -- run without --offline.)"]
     return "\n".join(out)
+
+
+# ===========================================================================
+# TEAM COACH: turns today's action plan into your team's week
+# ===========================================================================
+AGENTS["coach"] = {
+    "title": "Team Coach",
+    "tools": ["team_roster", "check_workload"],
+    "effort": "medium",
+    "system": CONTEXT + """
+YOUR JOB: you support the analytics manager in running their team. Turn today's findings and action plan into THIS WEEK's
+analyst tasks. Business owners (performance marketing, buyers, brand managers) own the fixes; analysts own the analysis,
+the tracking and the follow-through. For each task: owner, what exactly to deliver, due day, which INR impact it protects,
+skill used and hours. Match skills; give each person one stretch task tied to their growth goal; never exceed free hours --
+verify with check_workload and fix until it has no issues (a deliberate stretch skill mismatch is fine; say so).
+Then write short 1:1 notes per person: recognition, this week's focus, one coaching tip. Call submit_team_plan.""",
+}
+SUBMIT_TEAM_PLAN = {
+    "name": "submit_team_plan", "description": "Hand in the week's task board and 1:1 notes.",
+    "input_schema": {"type": "object", "properties": {"task_board": {"type": "string"}, "one_on_ones": {"type": "string"}},
+                     "required": ["task_board", "one_on_ones"]},
+}
+
+
+def offline_coach(findings):
+    """Uses the action values the Plan & Landing Analyst already put on each fix (no re-computing)."""
+    import team_tools
+    acts = re.findall(r"^- (.+?): (INR [+-]?[\d.]+ (?:Cr|L))$", findings.get("Plan & Landing Analyst", ""), re.M)
+    tasks = []
+    for what, amount in acts:
+        who, skill, hrs = ("Rohan", "traffic", 4) if "Tier" in what else ("Meera", "supply", 6)
+        tasks.append({"owner": who, "task": f"Drive + track: {what}", "skill": skill, "hours": hrs, "due": "Mon",
+                      "inr": amount.replace("+", "")})
+    tasks += [
+        {"owner": "Meera", "task": "Chase Formale new-season inbound; October risk note", "skill": "merchandising", "hours": 4, "due": "Wed", "inr": 0},
+        {"owner": "Asha", "task": "Pricing & rebate decision memo (Stridex price, MP rebate top-up) for the category head",
+         "skill": "pricing", "hours": 6, "due": "Tue", "inr": 0},
+        {"owner": "Asha", "task": "Re-phase remaining days + landing note for leadership", "skill": "planning", "hours": 4, "due": "Tue", "inr": 0},
+        {"owner": "Kabir", "task": "Refresh dashboard; draft UrbanKick and Vantage brand packs", "skill": "brand packs", "hours": 8, "due": "Thu", "inr": 0},
+        {"owner": "Rohan", "task": "STRETCH: write the recommendation (not just the numbers) for the traffic fix", "skill": "funnel", "hours": 3, "due": "Wed", "inr": 0},
+        {"owner": "Kabir", "task": "STRETCH: co-present the UrbanKick pack in the brand meeting with Asha", "skill": "brand packs", "hours": 3, "due": "Fri", "inr": 0},
+    ]
+    check = team_tools.check_workload(tasks)
+    board = ["# This week's task board [offline rule-based draft]", "", "| Owner | Task | Due | Hours | INR at stake |", "|---|---|---|---|---|"]
+    board += [f"| {t['owner']} | {t['task']} | {t['due']} | {t['hours']} | {t['inr'] or '-'} |" for t in tasks]
+    board += ["", "Workload: " + ", ".join(f"{p['name']} {p['assigned_hrs']:.0f}/{p['free_hrs']}h" for p in check["people"])
+              + ("" if check["ok"] else " -- ISSUES: " + "; ".join(check["issues"]))]
+    ones = ["# 1:1 notes [offline rule-based draft]", ""]
+    for m in team_tools.team_roster()["team"]:
+        mine = [t["task"] for t in tasks if t["owner"] == m["name"]]
+        ones += [f"## {m['name']} ({m['role']})", f"- Focus: {mine[0]}", f"- Growth goal: {m['growth_goal']}", ""]
+    return {"task_board": "\n".join(board), "one_on_ones": "\n".join(ones)}
+
+
+OFFLINE["coach"] = offline_coach

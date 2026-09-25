@@ -435,7 +435,8 @@ def _register_action_tools():
     if "month_landing" not in _FUNCS:
         import action_tools
         import pack_tools
-        for mod in (action_tools, pack_tools):
+        import team_tools
+        for mod in (action_tools, pack_tools, team_tools):
             TOOL_SPECS.update(mod.SPECS)
             _FUNCS.update(mod.FUNCS)
 
