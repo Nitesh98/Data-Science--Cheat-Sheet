@@ -2,7 +2,7 @@
 
 A team of AI agents that does the daily plan-vs-actual diagnosis for a men's footwear category.
 It tracks MTD and intraday PvA for GMV, GM and every funnel metric, explains the gap in rupees,
-checks pricing and rebate decisions, and drafts the Slack note and exec summary.
+checks pricing and rebate decisions, rules supply (broken sizes, live styles, new season) in or out, and drafts the Slack note and exec summary.
 **A human approves the draft before anything goes out.**
 
 > Everything here uses **synthetic, seeded data**. The brands, numbers and events are made up.
@@ -19,14 +19,16 @@ work to each other.
 | **PvA Monitor** | Where are we vs plan, MTD and right now? What's flagged? When did it break today? | `get_pva`, `intraday_by_hour` |
 | **Funnel Analyst** | Which funnel step and which slice (brand, channel, city tier...) explains the rupees? | `gmv_bridge`, `get_pva`, `run_sql` |
 | **Pricing & Rebate Analyst** | Did our OR/SOR price decisions or MP rebates cause it? What's the GMV vs GM trade-off? | `pricing_check`, `gmv_bridge`, `run_sql` |
+| **Merchandising Analyst** | Is it supply? Live styles, size availability (broken sizes), new-season share. Rules supply in or out for each brand behind plan and flags risks that haven't hit GMV yet | `merch_health`, `merch_by_hour`, `intraday_by_hour`, `get_pva`, `run_sql` |
 | **Writer** | Turns the findings into a 5-line Slack note and a one-page exec summary | none (only `submit_draft`) |
 | **Reviewer** | Re-runs the tools and checks every number before you see it | all read tools + `submit_review` |
 | **You** | Final approval | `python3 run_team.py --approve` |
 
 ```
 Monitor ─┐
-Funnel  ─┼─> Writer ──> Reviewer ──(issues?)──> Writer ... ──> DRAFT ──> YOU approve
-Pricing ─┘
+Funnel  ─┤
+Pricing ─┼─> Writer ──> Reviewer ──(issues?)──> Writer ... ──> DRAFT ──> YOU approve
+Merch   ─┘
 ```
 
 **Why plain Python runs the order instead of a "boss" LLM:** this review is the same every day, so a
@@ -85,7 +87,7 @@ A full run makes roughly 30–60 API calls on `claude-opus-5`. To try it cheaply
 |---|---|
 | `slack_note.md` | 5 lines: PvA, gap in INR, top 3 reasons, top 3 actions, the ask |
 | `exec_summary.md` | One page: KPI table, GMV bridge, root causes, pricing trade-offs, intraday alert, actions |
-| `brand_table.csv` | Per brand: plan, actual, PvA, gap, GM PvA, funnel PvAs, discount pp and main driver (deterministic) |
+| `brand_table.csv` | Per brand: plan, actual, PvA, gap, GM PvA, funnel PvAs, discount pp, worst size availability and main driver (deterministic) |
 | `queries.sql` | Every query the agents ran, to port to your real warehouse |
 | `transcript.md` | What each specialist found |
 
@@ -93,7 +95,7 @@ A full run makes roughly 30–60 API calls on `claude-opus-5`. To try it cheaply
 
 ## The planted story (spoilers: try the agents first!)
 
-`data.py` hides five things in the September 2026 data. A good run finds all five:
+`data.py` hides seven things in the September 2026 data. A good run finds all seven:
 
 1. **Stridex (OR) price hike** from Sep 10 (discount 35% → 28%). Consideration is down and GMV
    is ~₹1.6 Cr behind plan, but GM is *above* plan. Is it the right trade?
@@ -102,16 +104,21 @@ A full run makes roughly 30–60 API calls on `claude-opus-5`. To try it cheaply
 3. **App traffic in Tier-2 and Tier-3 cities down 20%** since Sep 18 (a paused campaign). This is
    the single biggest rupee driver.
 4. **Coastline (SOR)** is running ~5% *above* plan. It's a tailwind that hides some of the misses.
-5. **Today from 11:00, UrbanKick sneakers consideration halves** (broken sizes). This only shows
-   up intraday.
+5. **Today from 11:00, UrbanKick sneakers consideration halves.** This only shows up intraday. The
+   Merchandising Analyst finds *why*: sizes 8–10 sold out during the morning, and size availability
+   fell from 87% to 46%, exactly when demand dropped.
+6. **Supply is fine for Stridex and Vantage.** Their misses really are price and rebate, and the Merch
+   Analyst should *rule supply out* rather than pile on.
+7. **Formale's new-season (autumn-winter) stock is late.** New-season share is ~13% vs a 35% target.
+   There's no GMV hit yet, so it's an early warning for October.
 
 ## Files
 
 | File | What |
 |---|---|
 | `config.py` | Dates, thresholds, model. Change settings here. |
-| `data.py` | Builds the synthetic warehouse (`data/footwear.db`, SQLite): plan phasing AOP → MoP → DoD, hourly actuals |
-| `tools.py` | The tools: PvA, GMV bridge, intraday by hour, pricing check, read-only SQL. It also logs every query. |
+| `data.py` | Builds the synthetic warehouse (`data/footwear.db`, SQLite): plan phasing AOP → MoP → DoD, hourly actuals, hourly supply (`inventory_hourly`, `merch_plan`) |
+| `tools.py` | The tools: PvA, GMV bridge, intraday by hour, pricing check, merch health, merch by hour, read-only SQL. It also logs every query. |
 | `llm.py` | The agent loop, with the SDK or the urllib fallback |
 | `agents.py` | Each agent's job description and tool list, plus the offline stand-ins |
 | `run_team.py` | The orchestrator and the approval step |
@@ -126,9 +133,10 @@ Built on the same pattern: tools do the math, agents do the reasoning, the Revie
 | **OR/SOR Pricing Optimizer** | Recommend price/discount per style to close the gap at a GM floor | elasticity estimate from history, `simulate_price_change` |
 | **MP Rebate Allocator** | Split a rebate budget across MP brands for the highest GMV per ₹ of rebate | `simulate_rebate`, budget tracker |
 | **Brand Planner** | Brand-level plans and brand-partner performance packs | `brand_pack` |
-| **Merchandising Analyst** | Live styles, broken sizes, new-season share (would have *explained* today's UrbanKick drop) | inventory/size-availability table |
 | **Monthly Review Pack** | Monthly KPI tables, commentary and deck bullets | reuse all tools + a deck writer |
 | **Dashboard Builder** | Turn the recurring queries in `queries.sql` into dashboard specs | — |
 
-Good first exercises: add a `size_availability` table to `data.py`, give the Monitor a tool that reads it,
-and see whether the team works out *why* UrbanKick broke today, not just *that* it did.
+✅ **Merchandising Analyst**: built. It explains today's UrbanKick drop as broken sizes.
+
+Good next exercise: give the Merch Analyst a `simulate_replenishment` tool (if sizes 8–10 come back
+at 14:00, how much of today's gap do we recover?) and see whether it puts a rupee value on its action.

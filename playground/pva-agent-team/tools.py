@@ -251,7 +251,74 @@ def pricing_check(period):
 
 
 # ---------------------------------------------------------------------------
-# TOOL 5: Read-only SQL for anything the fixed tools don't cover
+# TOOL 5: Merchandising health -- is supply (not demand or price) the problem?
+# ---------------------------------------------------------------------------
+def _merch_where(filters):
+    clauses, params = [], []
+    for dim, val in (filters or {}).items():
+        if dim not in ("brand", "article_type"):
+            raise ValueError("supply data only has brand and article_type filters")
+        clauses.append(f"i.{dim} = ?")
+        params.append(val)
+    return clauses, params
+
+
+def merch_health(period, filters=None):
+    """Per brand x article_type: live styles vs plan, size availability vs target,
+    broken-style %, new-season share vs target. mtd = average over the month so far;
+    intraday = latest loaded hour today vs the same hour yesterday."""
+    w, p = _merch_where(filters)
+    if period == "mtd":
+        d_from, d_to, _ = _window("mtd")
+        sql = ("SELECT i.brand, i.article_type, AVG(i.live_styles) live_styles, m.live_styles_plan, "
+               "AVG(i.size_availability) size_availability, m.size_availability_target, "
+               "AVG(i.broken_style_pct) broken_style_pct, "
+               "(SELECT j.new_season_share FROM inventory_hourly j WHERE j.brand = i.brand AND j.article_type = i.article_type "
+               " AND j.date = ? AND j.hour = 23) new_season_share, m.new_season_share_target "
+               "FROM inventory_hourly i JOIN merch_plan m USING (brand, article_type) "
+               f"WHERE {' AND '.join(['i.date BETWEEN ? AND ?'] + w)} GROUP BY i.brand, i.article_type")
+        rows = _query(sql, [d_to, d_from, d_to] + p)
+    elif period == "intraday":
+        today = config.AS_OF_DATE
+        last_h = config.AS_OF_HOUR - 1
+        sql = ("SELECT i.brand, i.article_type, i.live_styles, m.live_styles_plan, i.size_availability, "
+               "m.size_availability_target, i.broken_style_pct, i.new_season_share, m.new_season_share_target, "
+               "y.size_availability AS size_availability_yesterday_same_hour "
+               "FROM inventory_hourly i JOIN merch_plan m USING (brand, article_type) "
+               "JOIN inventory_hourly y ON y.brand = i.brand AND y.article_type = i.article_type AND y.date = ? AND y.hour = i.hour "
+               f"WHERE {' AND '.join(['i.date = ?', 'i.hour = ?'] + w)}")
+        rows = _query(sql, [(today - timedelta(1)).isoformat(), today.isoformat(), last_h] + p)
+    else:
+        raise ValueError("period must be 'mtd' or 'intraday'")
+
+    out = []
+    for r in rows:
+        flags = []
+        if r["live_styles"] < 0.9 * r["live_styles_plan"]:
+            flags.append(f"live styles {r['live_styles'] / r['live_styles_plan']:.0%} of plan")
+        if r["size_availability"] < r["size_availability_target"] - 0.05:
+            flags.append(f"broken sizes: size availability {r['size_availability']:.0%} vs {r['size_availability_target']:.0%} target")
+        if r["new_season_share"] < r["new_season_share_target"] - 0.10:
+            flags.append(f"new-season share {r['new_season_share']:.0%} vs {r['new_season_share_target']:.0%} target (future risk)")
+        out.append({**{k: (_r(v) if isinstance(v, float) else v) for k, v in r.items()}, "flags": flags})
+    out.sort(key=lambda r: (-len(r["flags"]), r["size_availability"]))
+    return {"period": period, "as_of": f"{config.AS_OF_DATE} {config.AS_OF_HOUR:02d}:00", "rows": out}
+
+
+def merch_by_hour(brand, article_type):
+    """Today, hour by hour: size availability next to consideration PvA -- does demand
+    fall exactly when sizes run out?"""
+    inv = _query("SELECT hour, size_availability, broken_style_pct FROM inventory_hourly "
+                 "WHERE date = ? AND brand = ? AND article_type = ? ORDER BY hour",
+                 [config.AS_OF_DATE.isoformat(), brand, article_type])
+    fun = {h["hour"]: h for h in intraday_by_hour({"brand": brand, "article_type": article_type})["hours"]}
+    return {"date": config.AS_OF_DATE.isoformat(), "brand": brand, "article_type": article_type,
+            "hours": [{**i, "consideration_pva": fun.get(i["hour"], {}).get("consideration_pva"),
+                       "gmv_pva": fun.get(i["hour"], {}).get("gmv_pva")} for i in inv]}
+
+
+# ---------------------------------------------------------------------------
+# TOOL 6: Read-only SQL for anything the fixed tools don't cover
 # ---------------------------------------------------------------------------
 def run_sql(query):
     q = query.strip().rstrip(";")
@@ -273,6 +340,9 @@ def schema():
 # Brand-level table for the report (deterministic, not written by an LLM)
 # ---------------------------------------------------------------------------
 def brand_table(period="mtd"):
+    supply = {}
+    for m in merch_health(period)["rows"]:
+        supply.setdefault(m["brand"], []).append(m["size_availability"])
     rows = []
     for r in get_pva(period, "brand")["rows"]:
         br = gmv_bridge(period, {"brand": r["group"]})
@@ -285,6 +355,7 @@ def brand_table(period="mtd"):
             "gm_pva": m["gm"]["pva"], "sessions_pva": m["sessions"]["pva"],
             "conversion_pva": m["conversion"]["pva"], "asp_pva": m["asp"]["pva"],
             "discount_diff_pp": m["discount_pct"]["diff_pp"],
+            "size_availability_min": round(min(supply.get(r["group"], [0])), 3),
             "main_driver": f"{worst['driver']} ({worst['gmv_impact_inr']:+,} INR)" if worst["gmv_impact_inr"] < 0 else "on/above plan",
         })
     return rows
@@ -324,6 +395,21 @@ TOOL_SPECS = {
                        "discount % and rebate % vs plan, ASP / consideration / GMV / GM PvA, and implied discount elasticity.",
         "input_schema": {"type": "object", "properties": {"period": _PERIOD}, "required": ["period"]},
     },
+    "merch_health": {
+        "description": "Supply health per brand x article_type: live styles vs plan, size availability (demand-weighted share of sizes "
+                       "in stock) vs target, broken-style %, new-season share vs target, with flags. mtd = month average; "
+                       "intraday = latest hour today vs same hour yesterday. Use it to rule supply IN or OUT as a cause.",
+        "input_schema": {"type": "object", "properties": {
+            "period": _PERIOD,
+            "filters": {"type": "object", "description": "Optional: brand and/or article_type only.",
+                        "additionalProperties": {"type": "string"}}}, "required": ["period"]},
+    },
+    "merch_by_hour": {
+        "description": "Today hour by hour for ONE brand + article_type: size availability and broken-style % next to "
+                       "consideration PvA and GMV PvA. Shows whether demand dropped exactly when sizes ran out.",
+        "input_schema": {"type": "object", "properties": {
+            "brand": {"type": "string"}, "article_type": {"type": "string"}}, "required": ["brand", "article_type"]},
+    },
     "run_sql": {
         "description": "Run ONE read-only SQLite SELECT against the warehouse for anything the other tools don't cover "
                        "(e.g. two-dimension slices, daily trends). Max 100 rows returned. Schema:\n" ,
@@ -332,7 +418,8 @@ TOOL_SPECS = {
 }
 
 _FUNCS = {"get_pva": get_pva, "gmv_bridge": gmv_bridge, "intraday_by_hour": intraday_by_hour,
-          "pricing_check": pricing_check, "run_sql": run_sql}
+          "pricing_check": pricing_check, "merch_health": merch_health, "merch_by_hour": merch_by_hour,
+          "run_sql": run_sql}
 
 
 def tool_definitions(names):
@@ -341,8 +428,9 @@ def tool_definitions(names):
     for n in names:
         spec = dict(TOOL_SPECS[n])
         if n == "run_sql":
-            spec["description"] = spec["description"] + schema() + \
-                "\nfact_hourly has actuals (date 'YYYY-MM-DD', hour 0-23). plan_daily is daily; join dim_style for commercial_model/price_band."
+            spec["description"] = spec["description"] + schema() + (
+                "\nfact_hourly has actuals (date 'YYYY-MM-DD', hour 0-23). plan_daily is daily; join dim_style for commercial_model/price_band. "
+                "inventory_hourly is supply by brand x article_type only (no channel/city_tier).")
         defs.append({"name": n, **spec})
     return defs
 

@@ -4,7 +4,8 @@ The team. Each agent = a job description (system prompt) + the tools it may use.
     Monitor         -> "Where are we vs plan, MTD and right now? What's flagged?"
     Funnel Analyst  -> "Which funnel step and which slice explains the rupees?"
     Pricing Analyst -> "Did our price (OR/SOR) or rebate (MP) decisions cause it?"
-    Writer          -> Slack note + exec summary from the three findings
+    Merch Analyst   -> "Is it supply? Live styles, broken sizes, new-season share"
+    Writer          -> Slack note + exec summary from the four findings
     Reviewer        -> Re-checks every number with the same tools; approves or sends back
 
 Each agent also has an OFFLINE stand-in: simple rules over the same tools, so
@@ -60,6 +61,19 @@ For each brand whose discount moved >1pp vs plan: what changed, since when (use 
 GMV impact vs GM impact (the trade-off!), and a recommendation (hold / partially roll back / reinstate rebate)
 with the expected GMV recovery and GM cost. Remember MP brands' price is set by the brand -- our only lever is rebate.""",
     },
+    "merch": {
+        "title": "Merchandising Analyst",
+        "tools": ["merch_health", "merch_by_hour", "intraday_by_hour", "get_pva", "run_sql"],
+        "effort": "high",
+        "system": CONTEXT + """
+YOUR JOB: the supply side. For every brand/article_type that is behind plan (MTD or intraday), rule supply IN or OUT
+as the cause: live styles vs plan, size availability vs target (low = broken sizes: customers view the product page but
+can't find their size, so consideration ATC/PDP drops while traffic holds), broken-style %, new-season share.
+For an intraday drop, use merch_by_hour to show whether demand fell exactly when sizes ran out. Also flag supply
+risks that haven't hit GMV yet (e.g. new season late). Output: per brand, 'supply is / is not the cause' with numbers,
+then actions (replenish / reorder, push the affected styles down in listings, move traffic to in-stock styles, chase inbound)
+and who owns each (category buyer, planning, catalogue).""",
+    },
     "writer": {
         "title": "Writer",
         "tools": [],
@@ -68,12 +82,13 @@ with the expected GMV recovery and GM cost. Remember MP brands' price is set by 
 YOUR JOB: turn the specialists' findings into two drafts for the category head, then call submit_draft.
 1) slack_note: exactly 5 lines -> PvA (MTD + intraday) | gap in INR | top 3 reasons | top 3 actions (with owner) | ask/decision needed.
 2) exec_summary: markdown, <= 1 page: headline, KPI table (metric, plan, actual, PvA), GMV bridge table
-(Traffic / Conversion / UPT / ASP in INR), root causes, pricing & rebate trade-offs, intraday alert, actions with owners.
+(Traffic / Conversion / UPT / ASP in INR), root causes, pricing & rebate trade-offs, supply (size availability /
+new-season) findings, intraday alert, actions with owners.
 Use ONLY numbers present in the findings. If the Reviewer sent issues, fix every one.""",
     },
     "reviewer": {
         "title": "Reviewer",
-        "tools": ["get_pva", "gmv_bridge", "pricing_check", "intraday_by_hour", "run_sql"],
+        "tools": ["get_pva", "gmv_bridge", "pricing_check", "intraday_by_hour", "merch_health", "merch_by_hour", "run_sql"],
         "effort": "high",
         "system": CONTEXT + """
 YOUR JOB: you are the numbers checker before this goes to leadership. Re-run the tools and verify EVERY number,
@@ -151,6 +166,23 @@ def offline_pricing():
     return "\n".join(lines) or "No brand's discount moved more than 1pp vs plan."
 
 
+def offline_merch():
+    lines = []
+    for period in ("intraday", "mtd"):
+        for r in tools.merch_health(period)["rows"]:
+            if r["flags"]:
+                lines.append(f"- {period.upper()} {r['brand']} {r['article_type']}: " + "; ".join(r["flags"]))
+                if period == "intraday" and r["size_availability"] < r["size_availability_target"] - 0.05:
+                    hrs = tools.merch_by_hour(r["brand"], r["article_type"])["hours"]
+                    hit = next((h for h in hrs if (h["consideration_pva"] or 1) < 0.8), None)
+                    if hit:
+                        lines.append(f"  consideration PvA fell to {hit['consideration_pva']:.0%} at {hit['hour']:02d}:00, "
+                                     f"when size availability was {hit['size_availability']:.0%} -> supply IS the cause")
+    healthy = sorted({r["brand"] for r in tools.merch_health("mtd")["rows"] if not r["flags"]})
+    lines.append("- Supply healthy MTD (so not the cause) for: " + ", ".join(healthy))
+    return "\n".join(lines)
+
+
 def offline_writer(findings, issues=None):
     mtd = tools.get_pva("mtd")["rows"][0]
     intr = tools.get_pva("intraday")["rows"][0]
@@ -172,4 +204,4 @@ def offline_reviewer(draft):
     return {"approved": ok, "issues": [] if ok else ["Bridge does not add up to the GMV gap"]}
 
 
-OFFLINE = {"monitor": offline_monitor, "funnel": offline_funnel, "pricing": offline_pricing}
+OFFLINE = {"monitor": offline_monitor, "funnel": offline_funnel, "pricing": offline_pricing, "merch": offline_merch}

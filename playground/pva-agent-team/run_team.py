@@ -8,8 +8,9 @@ Orchestrator: runs the agent team end-to-end and leaves a DRAFT for you to appro
 Pipeline (plain Python decides the order -- a "workflow", not an LLM boss):
 
     Monitor ─┐
-    Funnel  ─┼─> Writer ──> Reviewer ──(issues?)──> Writer ... ──> DRAFT ──> YOU approve
-    Pricing ─┘
+    Funnel  ─┤
+    Pricing ─┼─> Writer ──> Reviewer ──(issues?)──> Writer ... ──> DRAFT ──> YOU approve
+    Merch   ─┘
 
 Outputs in out/<date>/: slack_note.md, exec_summary.md, brand_table.csv, queries.sql, transcript.md
 """
@@ -30,7 +31,7 @@ def say(msg):
 
 def run_specialists(offline):
     findings = {}
-    for key in ("monitor", "funnel", "pricing"):
+    for key in ("monitor", "funnel", "pricing", "merch"):
         a = agents.AGENTS[key]
         say(f"\n>> {a['title']} working...")
         if offline:

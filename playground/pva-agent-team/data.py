@@ -12,6 +12,9 @@ hour_curve    share of a day's traffic that lands in each hour (sums to 1)
 plan_phasing  AOP -> MoP -> DoD: the weight each day of the month gets
 plan_daily    phased plan per date x brand x article_type x channel x city_tier
 fact_hourly   actuals per date x hour x brand x article_type x channel x city_tier
+merch_plan    per brand x article_type: planned live styles + size-availability / new-season targets
+inventory_hourly  supply snapshot per date x hour x brand x article_type: live styles,
+              size availability (demand-weighted share of sizes in stock), broken-style %, new-season share
 
 Funnel identity used everywhere (so every rupee of gap can be explained):
     GMV = Sessions x (LV/Session) x (PDP/LV) x (ATC/PDP) x (Orders/ATC) x UPT x ASP
@@ -22,7 +25,11 @@ HIDDEN STORY (what the agents should discover -- don't show them this file):
   2. Vantage (MP) rebate budget exhausted from Sep 16: Myntra rebate 8% -> 2%.
   3. App traffic in Tier-2/Tier-3 cities down 20% from Sep 18 (campaign paused).
   4. Coastline (SOR) flip-flops/sandals running ~5% above plan (traffic tailwind).
-  5. TODAY from 11:00: UrbanKick sneakers ATC/PDP collapses ~45% (broken sizes).
+  5. TODAY from 11:00: UrbanKick sneakers ATC/PDP collapses ~45% -- because sizes 8-10 sold out
+     (size availability 87% -> ~45%, most styles "broken"). Only inventory_hourly shows the WHY.
+  6. Supply is healthy for Stridex and Vantage -> their misses are price/rebate, not stock.
+  7. Formale's autumn-winter (new season) shipment is late: new-season share stuck ~12% vs 35%
+     target. No GMV hit yet -- an early-warning risk for October.
 """
 import math
 import random
@@ -154,6 +161,45 @@ def stoch_round(x, rng):
     return int(math.floor(x + rng.random()))
 
 
+SIZE_TARGET = 0.85
+NEW_SEASON_TARGET = 0.35
+
+
+def size_availability(d, hour, style, rng):
+    """Demand-weighted share of sizes in stock. Healthy ~0.87 unless the story says otherwise."""
+    brand, at, *_ = style
+    base = rng.gauss(0.87, 0.012)
+    if brand == "UrbanKick" and at == "Sneakers" and d == config.AS_OF_DATE:
+        # sizes 8-10 sell through during the morning, gone by 11:00 (matches the shock above)
+        base = {8: 0.84, 9: 0.79, 10: 0.72}.get(hour, 0.46 if hour >= 11 else base)
+    return min(base, 0.97)
+
+
+def build_inventory(con, days):
+    """Supply side. Separate RNG so the funnel actuals above stay identical."""
+    rng = random.Random(7)
+    plan_rows, inv_rows = [], []
+    for st in STYLES:
+        plan_rows.append((st[0], st[1], int(round(st[6] * 90)), SIZE_TARGET, NEW_SEASON_TARGET))
+    con.executemany("INSERT INTO merch_plan VALUES (?,?,?,?,?)", plan_rows)
+    for i, d in enumerate(days):
+        if d > config.AS_OF_DATE:
+            break
+        for st, (_, _, live_plan, _, _) in zip(STYLES, plan_rows):
+            live = int(round(live_plan * rng.gauss(1.0, 0.02)))
+            # autumn-winter season lands through the month; Formale's shipment is late
+            ns = 0.12 if st[0] == "Formale" else 0.22 + 0.18 * i / len(days)
+            ns += rng.gauss(0, 0.01)
+            for h in range(24):
+                if d == config.AS_OF_DATE and h >= config.AS_OF_HOUR:
+                    break
+                sa = size_availability(d, h, st, rng)
+                broken = max(0.0, min(1.0, 0.08 + (0.87 - sa) * 1.6 + rng.gauss(0, 0.01)))
+                inv_rows.append((d.isoformat(), h, st[0], st[1], live, round(sa, 4), round(broken, 4), round(ns, 4)))
+    con.executemany("INSERT INTO inventory_hourly VALUES (?,?,?,?,?,?,?,?)", inv_rows)
+    con.execute("CREATE INDEX ix_inv ON inventory_hourly(date, hour)")
+
+
 def build():
     rng = random.Random(42)
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -172,6 +218,10 @@ def build():
         CREATE TABLE fact_hourly (date TEXT, hour INTEGER, brand TEXT, article_type TEXT, channel TEXT,
             city_tier TEXT, sessions INTEGER, list_views INTEGER, pdp_views INTEGER, atc INTEGER,
             orders INTEGER, units INTEGER, gmv REAL, gm REAL, mrp_value REAL, rebate_amt REAL);
+        CREATE TABLE merch_plan (brand TEXT, article_type TEXT, live_styles_plan INTEGER,
+            size_availability_target REAL, new_season_share_target REAL, PRIMARY KEY (brand, article_type));
+        CREATE TABLE inventory_hourly (date TEXT, hour INTEGER, brand TEXT, article_type TEXT,
+            live_styles INTEGER, size_availability REAL, broken_style_pct REAL, new_season_share REAL);
     """)
 
     for st in STYLES:
@@ -232,6 +282,7 @@ def build():
     con.executemany("INSERT INTO plan_daily VALUES (" + ",".join("?" * 15) + ")", plan_rows)
     con.executemany("INSERT INTO fact_hourly VALUES (" + ",".join("?" * 16) + ")", fact_rows)
     con.execute("CREATE INDEX ix_fact ON fact_hourly(date, hour)")
+    build_inventory(con, days)
     con.commit()
     con.close()
     print(f"Built {config.DB_PATH} -- {len(plan_rows):,} plan rows, {len(fact_rows):,} hourly actual rows")
