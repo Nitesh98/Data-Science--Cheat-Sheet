@@ -5,6 +5,10 @@ The team. Each agent = a job description (system prompt) + the tools it may use.
     Funnel Analyst  -> "Which funnel step and which slice explains the rupees?"
     Pricing Analyst -> "Did our price (OR/SOR) or rebate (MP) decisions cause it?"
     Merch Analyst   -> "Is it supply? Live styles, broken sizes, new-season share"
+  --- stage 2: act (each sees the stage-1 findings) ---
+    Rebate Allocator  -> "Should we spend more MP rebate, and on which brand?"
+    Pricing Optimizer -> "What discount should OR/SOR brands run for the rest of the month?"
+    Plan & Landing    -> "Where does the month land, what's each action worth, is it enough?"
     Writer          -> Slack note + exec summary from the four findings
     Reviewer        -> Re-checks every number with the same tools; approves or sends back
 
@@ -74,6 +78,41 @@ risks that haven't hit GMV yet (e.g. new season late). Output: per brand, 'suppl
 then actions (replenish / reorder, push the affected styles down in listings, move traffic to in-stock styles, chase inbound)
 and who owns each (category buyer, planning, catalogue).""",
     },
+    "rebate": {
+        "title": "MP Rebate Allocator",
+        "tools": ["rebate_status", "estimate_elasticity", "simulate_rebate", "optimize_rebate"],
+        "effort": "high",
+        "system": CONTEXT + f"""
+YOUR JOB: decide MP rebate spend for the rest of the month. The category head can release up to INR
+{config.REBATE_TOPUP_INR / 1e5:.0f} lakh of extra rebate. Check each MP brand's budget position, the FITTED elasticities (not
+assumptions -- note r2), and simulate options, including reinstating any rebate that was cut. Judge value by GMV gained per
+rebate rupee and the GM given up. It is a valid answer to spend less than the top-up, or nothing, if the return is poor --
+say so plainly and say what it would cost to buy GMV this way. Output: recommended rebate % per MP brand, rest-of-month
+GMV delta, GM delta, rebate cost, and the reasoning.""",
+    },
+    "pricing_opt": {
+        "title": "OR/SOR Pricing Optimizer",
+        "tools": ["estimate_elasticity", "price_scan", "pricing_check"],
+        "effort": "high",
+        "system": CONTEXT + """
+YOUR JOB: recommend the discount OR and SOR brands should run for the rest of the month. Focus on brands whose discount
+moved vs plan, plus any brand where a price move clearly pays. Use price_scan (it uses fitted elasticities) and show the
+GMV-vs-GM trade-off for 2-3 options (e.g. hold, partial rollback, full rollback to plan discount). Recommend one, with the
+rest-of-month GMV and GM deltas. Say explicitly if a price change was the RIGHT call even though it hurt GMV.""",
+    },
+    "planner": {
+        "title": "Plan & Landing Analyst",
+        "tools": ["month_landing", "rephase_plan", "restore_to_plan", "action_coverage"],
+        "effort": "high",
+        "system": CONTEXT + """
+YOUR JOB: the month-end view. 1) month_landing: where GMV lands vs MoP on current run-rate (note the run-rate is the last
+7 full days, so anything that broke TODAY is not in it yet). 2) Put a rupee value on the operational fixes the diagnosis
+found using restore_to_plan (e.g. restart paused traffic in a channel x city_tier slice; fix broken sizes seen intraday).
+3) Take the recommended actions from the Rebate Allocator and Pricing Optimizer as given. 4) action_coverage over the FULL
+action list -> how much of the gap it closes. 5) rephase_plan -> the daily targets needed. Be honest: if MoP is out of reach,
+say what landing is realistic with the actions and what to tell leadership. Output: landing, action list with INR each
+(GMV and GM) and owner, coverage %, realistic landing.""",
+    },
     "writer": {
         "title": "Writer",
         "tools": [],
@@ -83,12 +122,15 @@ YOUR JOB: turn the specialists' findings into two drafts for the category head, 
 1) slack_note: exactly 5 lines -> PvA (MTD + intraday) | gap in INR | top 3 reasons | top 3 actions (with owner) | ask/decision needed.
 2) exec_summary: markdown, <= 1 page: headline, KPI table (metric, plan, actual, PvA), GMV bridge table
 (Traffic / Conversion / UPT / ASP in INR), root causes, pricing & rebate trade-offs, supply (size availability /
-new-season) findings, intraday alert, actions with owners.
+new-season) findings, intraday alert, then MONTH LANDING and an ACTION PLAN table (action, owner, rest-of-month GMV INR,
+GM INR) with the coverage of the gap and the realistic landing. Slack note actions should be the top 3 by INR value.
 Use ONLY numbers present in the findings. If the Reviewer sent issues, fix every one.""",
     },
     "reviewer": {
         "title": "Reviewer",
-        "tools": ["get_pva", "gmv_bridge", "pricing_check", "intraday_by_hour", "merch_health", "merch_by_hour", "run_sql"],
+        "tools": ["get_pva", "gmv_bridge", "pricing_check", "intraday_by_hour", "merch_health", "merch_by_hour",
+                  "estimate_elasticity", "simulate_rebate", "price_scan", "month_landing", "restore_to_plan",
+                  "action_coverage", "run_sql"],
         "effort": "high",
         "system": CONTEXT + """
 YOUR JOB: you are the numbers checker before this goes to leadership. Re-run the tools and verify EVERY number,
@@ -120,6 +162,11 @@ SUBMIT_REVIEW = {
 # ---------------------------------------------------------------------------
 def cr(x):
     return f"INR {x / 1e7:+.2f} Cr" if abs(x) >= 1e7 else f"INR {x / 1e5:+.1f} L"
+
+
+def inr(x):
+    """Unsigned amount, e.g. budgets."""
+    return f"INR {x / 1e7:.2f} Cr" if abs(x) >= 1e7 else f"INR {x / 1e5:.1f} L"
 
 
 def offline_monitor():
@@ -183,6 +230,58 @@ def offline_merch():
     return "\n".join(lines)
 
 
+def offline_rebate():
+    import action_tools as A
+    lines = ["Budget: " + "; ".join(f"{b['brand']} spent {inr(b['spent_mtd_inr'])} of {inr(b['budget_inr'])}, "
+                                     f"rebate now {b['current_rebate_pct_7d']:.1%} vs plan {b['plan_rebate_pct']:.0%}"
+                                     for b in A.rebate_status()["brands"])]
+    lines.append("Fitted elasticity: " + ", ".join(f"{e['brand']} {e['elasticity_pct_per_pp']}" for e in
+                                                   A.estimate_elasticity()["brands"] if e["brand"] in ("Vantage", "Trekko", "Redline Sport")))
+    o = A.optimize_rebate(config.REBATE_TOPUP_INR)
+    for r in o["allocation"]:
+        lines.append(f"- {r['brand']}: rebate {r['rebate_pct_now']:.1%} -> {r['rebate_pct_new']:.1%}: GMV {cr(r['gmv_delta_inr'])}, "
+                     f"GM {cr(r['gm_delta_inr'])}, cost {cr(r['extra_rebate_cost_inr'])}")
+    ratio = o["total_gmv_delta_inr"] / max(1, o["total_extra_rebate_inr"])
+    lines.append(f"Top-up returns INR {ratio:.2f} GMV per INR 1 rebate -> "
+                 + ("poor value: recommend NOT spending it" if ratio < 1 else "worth spending"))
+    return "\n".join(lines)
+
+
+def offline_pricing_opt():
+    import action_tools as A
+    lines = []
+    for b in tools.pricing_check("mtd")["brands"]:
+        if b["commercial_model"] == "MP" or abs(b["discount_diff_pp"]) < 1:
+            continue
+        ps = A.price_scan(b["brand"])
+        cur, plan = ps["current_discount_pct"], ps["plan_discount_pct"]
+        mid = round((cur + plan) / 2, 3)
+        for r in A.price_scan(b["brand"], [cur, mid, plan])["grid"]:
+            lines.append(f"- {b['brand']} at {r['discount_pct']:.1%} discount: GMV {cr(r['gmv_delta_vs_now_inr'])}, "
+                         f"GM {cr(r['gm_delta_vs_now_inr'])} (rest of month vs holding {cur:.0%})")
+    return "\n".join(lines) or "No OR/SOR brand's discount moved >1pp vs plan."
+
+
+def offline_planner():
+    import action_tools as A
+    land = A.month_landing()["category"]
+    lines = [f"Landing on run-rate: {land['landing_pva']:.1%} of MoP ({cr(land['gap_to_mop_inr'])})"]
+    actions = []
+    for tier in ("Tier-2", "Tier-3"):
+        r = A.restore_to_plan("sessions", {"channel": "App", "city_tier": tier})
+        actions.append({"action": f"Restart App {tier} campaigns (sessions back to plan)", "gmv_inr": r["gmv_recovered_if_restored_inr"]})
+    worst = tools.merch_health("intraday")["rows"][0]
+    if worst["flags"]:
+        r = A.restore_to_plan("consideration", {"brand": worst["brand"], "article_type": worst["article_type"]}, "intraday")
+        actions.append({"action": f"Replenish sizes {worst['brand']} {worst['article_type']}", "gmv_inr": r["gmv_recovered_if_restored_inr"]})
+    cov = A.action_coverage(actions)
+    lines += [f"- {a['action']}: {cr(a['gmv_inr'])}" for a in actions]
+    lines.append(f"Coverage of gap: {cov['coverage']:.0%}; remaining gap {cr(-cov['remaining_gap_inr'])}")
+    rp = A.rephase_plan()
+    lines.append(f"To still hit MoP the remaining days need +{rp['required_uplift_vs_run_rate']:.0%} vs run-rate")
+    return "\n".join(lines)
+
+
 def offline_writer(findings, issues=None):
     mtd = tools.get_pva("mtd")["rows"][0]
     intr = tools.get_pva("intraday")["rows"][0]
@@ -204,4 +303,5 @@ def offline_reviewer(draft):
     return {"approved": ok, "issues": [] if ok else ["Bridge does not add up to the GMV gap"]}
 
 
-OFFLINE = {"monitor": offline_monitor, "funnel": offline_funnel, "pricing": offline_pricing, "merch": offline_merch}
+OFFLINE = {"monitor": offline_monitor, "funnel": offline_funnel, "pricing": offline_pricing, "merch": offline_merch,
+           "rebate": offline_rebate, "pricing_opt": offline_pricing_opt, "planner": offline_planner}

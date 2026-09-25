@@ -60,6 +60,8 @@ def _window(period):
         return config.MONTH_START.isoformat(), yday, None
     if period == "intraday":                      # today, hours before AS_OF_HOUR
         return today, today, config.AS_OF_HOUR
+    if period == "last7":                         # the 7 full days before today (run-rate)
+        return (config.AS_OF_DATE - timedelta(7)).isoformat(), (config.AS_OF_DATE - timedelta(1)).isoformat(), None
     raise ValueError("period must be 'mtd' or 'intraday'")
 
 
@@ -340,6 +342,9 @@ def schema():
 # Brand-level table for the report (deterministic, not written by an LLM)
 # ---------------------------------------------------------------------------
 def brand_table(period="mtd"):
+    _register_action_tools()
+    import action_tools
+    landing = {r["brand"]: r["landing_pva"] for r in action_tools.month_landing()["brands"]}
     supply = {}
     for m in merch_health(period)["rows"]:
         supply.setdefault(m["brand"], []).append(m["size_availability"])
@@ -356,6 +361,7 @@ def brand_table(period="mtd"):
             "conversion_pva": m["conversion"]["pva"], "asp_pva": m["asp"]["pva"],
             "discount_diff_pp": m["discount_pct"]["diff_pp"],
             "size_availability_min": round(min(supply.get(r["group"], [0])), 3),
+            "month_landing_pva": landing.get(r["group"]),
             "main_driver": f"{worst['driver']} ({worst['gmv_impact_inr']:+,} INR)" if worst["gmv_impact_inr"] < 0 else "on/above plan",
         })
     return rows
@@ -422,8 +428,18 @@ _FUNCS = {"get_pva": get_pva, "gmv_bridge": gmv_bridge, "intraday_by_hour": intr
           "run_sql": run_sql}
 
 
+def _register_action_tools():
+    """Forward-looking ACTION tools live in action_tools.py (which imports this module),
+    so they are registered on first use rather than at import time."""
+    if "month_landing" not in _FUNCS:
+        import action_tools
+        TOOL_SPECS.update(action_tools.SPECS)
+        _FUNCS.update(action_tools.FUNCS)
+
+
 def tool_definitions(names):
     """The `tools=[...]` list for the API, restricted to what one agent may use."""
+    _register_action_tools()
     defs = []
     for n in names:
         spec = dict(TOOL_SPECS[n])
@@ -437,9 +453,11 @@ def tool_definitions(names):
 
 def execute(name, args):
     """Run a tool the model asked for. Args are model-generated -> treated as untrusted."""
+    _register_action_tools()
     if name not in _FUNCS:
         return json.dumps({"error": f"unknown tool {name}"}), True
     try:
         return json.dumps(_FUNCS[name](**args), default=str), False
     except (TypeError, ValueError, FileNotFoundError) as e:
         return json.dumps({"error": str(e)}), True
+

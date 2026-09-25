@@ -30,6 +30,8 @@ HIDDEN STORY (what the agents should discover -- don't show them this file):
   6. Supply is healthy for Stridex and Vantage -> their misses are price/rebate, not stock.
   7. Formale's autumn-winter (new season) shipment is late: new-season share stuck ~12% vs 35%
      target. No GMV hit yet -- an early-warning risk for October.
+  8. Brands respond differently to discount (ELASTICITY below): Trekko most, Redline least.
+     The Rebate Allocator should discover this before splitting a rebate budget.
 """
 import math
 import random
@@ -60,6 +62,19 @@ CHANNELS = {"App": 0.78, "Web": 0.22}
 CITY_TIERS = {"Tier-1": 0.45, "Tier-2": 0.35, "Tier-3": 0.20}
 
 CATEGORY_DAILY_SESSIONS = 900_000
+
+# TRUE discount elasticity: % change in consideration per 1pp of discount. Hidden --
+# the agents must ESTIMATE it from the data (tools estimate_elasticity).
+ELASTICITY = {"Vantage": 2.2, "Redline Sport": 1.2, "Trekko": 2.6}
+DEFAULT_ELASTICITY = 1.8
+
+# Commercial terms (these ARE known to the business, so they go in dim_style)
+COGS_PCT_OF_MRP = 0.45        # OR: we buy at 45% of MRP
+SOR_MARGIN_SHARE = 0.27       # SOR: we keep 27% of GMV
+MP_COMMISSION = 0.20          # MP: we keep 20% of GMV, minus any rebate we fund
+
+# MP rebate budgets as a share of the planned monthly rebate spend. Vantage's ran out mid-month.
+REBATE_BUDGET_SHARE = {"Redline Sport": 1.0, "Trekko": 1.0, "Vantage": 0.55}
 PLAN_SESSION_AMBITION = 1.02          # AOP asks for 2% more traffic than the natural run-rate
 EVENT_DAYS = {date(2026, 9, 12), date(2026, 9, 13), date(2026, 9, 14)}   # "Footwear Fest"
 
@@ -133,7 +148,7 @@ def compute_cell(style, channel, tier, sessions, disc, rebate):
     r = base_rates(style, channel, tier)
     plan_disc = style[4]
     # Discount elasticity: every 1pp less discount -> ~1.8% less consideration
-    consideration = r["consideration"] * (1 + 1.8 * (disc - plan_disc))
+    consideration = r["consideration"] * (1 + ELASTICITY.get(brand, DEFAULT_ELASTICITY) * (disc - plan_disc))
     lv = sessions * r["lv_per_session"]
     pdp = lv * r["pdp_ctr"]
     atc = pdp * consideration
@@ -148,11 +163,11 @@ def money(units, mrp, disc, rebate, model):
     mrp_value = units * mrp
     rebate_amt = units * mrp * rebate
     if model == "OR":
-        gm = gmv - units * mrp * 0.45            # we own inventory: GMV - COGS
+        gm = gmv - units * mrp * COGS_PCT_OF_MRP # we own inventory: GMV - COGS
     elif model == "SOR":
-        gm = gmv * 0.27                          # fixed margin share
+        gm = gmv * SOR_MARGIN_SHARE              # fixed margin share
     else:
-        gm = gmv * 0.20 - rebate_amt             # MP: commission minus our rebate
+        gm = gmv * MP_COMMISSION - rebate_amt    # MP: commission minus our rebate
     return gmv, gm, mrp_value, rebate_amt
 
 
@@ -209,6 +224,7 @@ def build():
     con.executescript("""
         CREATE TABLE dim_style (brand TEXT, article_type TEXT, commercial_model TEXT, mrp REAL,
             plan_discount_pct REAL, plan_rebate_pct REAL, price_band TEXT,
+            cogs_pct_of_mrp REAL, sor_margin_share REAL, mp_commission REAL,
             PRIMARY KEY (brand, article_type));
         CREATE TABLE hour_curve (hour INTEGER PRIMARY KEY, share REAL);
         CREATE TABLE plan_phasing (date TEXT PRIMARY KEY, day_type TEXT, weight REAL, share_of_month REAL);
@@ -226,8 +242,10 @@ def build():
 
     for st in STYLES:
         brand, at, model, mrp, disc, rebate, _ = st
-        con.execute("INSERT INTO dim_style VALUES (?,?,?,?,?,?,?)",
-                    (brand, at, model, mrp, disc, rebate, price_band(mrp * (1 - disc))))
+        con.execute("INSERT INTO dim_style VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (brand, at, model, mrp, disc, rebate, price_band(mrp * (1 - disc)),
+                     COGS_PCT_OF_MRP if model == "OR" else None, SOR_MARGIN_SHARE if model == "SOR" else None,
+                     MP_COMMISSION if model == "MP" else None))
     con.executemany("INSERT INTO hour_curve VALUES (?,?)", list(enumerate(HOUR_SHARE)))
 
     days = [config.MONTH_START + timedelta(n) for n in range((config.MONTH_END - config.MONTH_START).days + 1)]
@@ -283,6 +301,11 @@ def build():
     con.executemany("INSERT INTO fact_hourly VALUES (" + ",".join("?" * 16) + ")", fact_rows)
     con.execute("CREATE INDEX ix_fact ON fact_hourly(date, hour)")
     build_inventory(con, days)
+    con.execute("CREATE TABLE rebate_budget (brand TEXT PRIMARY KEY, month TEXT, budget_inr REAL)")
+    for brand, share in REBATE_BUDGET_SHARE.items():
+        planned = con.execute("SELECT SUM(rebate_amt) FROM plan_daily WHERE brand = ?", (brand,)).fetchone()[0]
+        con.execute("INSERT INTO rebate_budget VALUES (?,?,?)",
+                    (brand, config.MONTH_START.strftime("%Y-%m"), round(planned * share, -5)))
     con.commit()
     con.close()
     print(f"Built {config.DB_PATH} -- {len(plan_rows):,} plan rows, {len(fact_rows):,} hourly actual rows")

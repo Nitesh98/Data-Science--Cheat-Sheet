@@ -21,6 +21,9 @@ VOLUME_THRESHOLD = {"mtd": 0.95, "intraday": 0.90}
 # move less than volumes, so a smaller miss is already meaningful.
 RATE_THRESHOLD = {"mtd": 0.97, "intraday": 0.95}
 
+# ---- Levers the action agents may propose ----------------------------------------
+REBATE_TOPUP_INR = 5_000_000      # extra MP rebate the category head could release (INR 50 lakh)
+
 # ---- LLM settings ------------------------------------------------------------
 MODEL = "claude-opus-5"
 MAX_TOKENS = 16000

@@ -7,9 +7,10 @@ Orchestrator: runs the agent team end-to-end and leaves a DRAFT for you to appro
 
 Pipeline (plain Python decides the order -- a "workflow", not an LLM boss):
 
-    Monitor ─┐
-    Funnel  ─┤
-    Pricing ─┼─> Writer ──> Reviewer ──(issues?)──> Writer ... ──> DRAFT ──> YOU approve
+    STAGE 1: diagnose        STAGE 2: act (sees stage 1)
+    Monitor ─┐               Rebate Allocator ─┐
+    Funnel  ─┤               Pricing Optimizer ┼─> Plan & Landing ─> Writer ─> Reviewer ─(issues?)─> Writer ...
+    Pricing ─┼──────────────>                  ┘   (sees everything)                      ─> DRAFT ─> YOU approve
     Merch   ─┘
 
 Outputs in out/<date>/: slack_note.md, exec_summary.md, brand_table.csv, queries.sql, transcript.md
@@ -29,19 +30,27 @@ def say(msg):
     print(msg, flush=True)
 
 
+DIAGNOSE = ("monitor", "funnel", "pricing", "merch")
+ACT = ("rebate", "pricing_opt", "planner")     # planner last: it adds up everyone's actions
+
+
 def run_specialists(offline):
     findings = {}
-    for key in ("monitor", "funnel", "pricing", "merch"):
-        a = agents.AGENTS[key]
-        say(f"\n>> {a['title']} working...")
-        if offline:
-            findings[a["title"]] = agents.OFFLINE[key]()
-        else:
-            import llm
-            text, _ = llm.run_agent(a["title"], a["system"], "Do your job for today's PvA review.",
-                                    a["tools"], effort=a["effort"], log=say)
-            findings[a["title"]] = text
-        say(findings[a["title"]])
+    for stage, keys in (("STAGE 1 -- diagnose", DIAGNOSE), ("STAGE 2 -- act", ACT)):
+        say(f"\n========== {stage} ==========")
+        for key in keys:
+            a = agents.AGENTS[key]
+            say(f"\n>> {a['title']} working...")
+            if offline:
+                findings[a["title"]] = agents.OFFLINE[key]()
+            else:
+                import llm
+                task = "Do your job for today's PvA review."
+                if findings:        # stage-2 agents build on what's been found so far
+                    task += "\n\nFINDINGS SO FAR:\n\n" + "\n\n".join(f"## {t}\n{f}" for t, f in findings.items())
+                text, _ = llm.run_agent(a["title"], a["system"], task, a["tools"], effort=a["effort"], log=say)
+                findings[a["title"]] = text
+            say(findings[a["title"]])
     return findings
 
 
