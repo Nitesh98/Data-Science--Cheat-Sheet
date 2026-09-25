@@ -1,0 +1,5 @@
+config.env
+watchlist.json
+demo_watchlist.json
+*.tmp
+__pycache__/
