@@ -323,30 +323,31 @@ def sabotage(offline):
 
 
 # ---------------------------------------------------------------------------
-def main():
-    args = sys.argv[1:]
-    offline = "--offline" in args
-    if not offline and not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("Set ANTHROPIC_API_KEY first (or add --offline).")
+def run_and_grade(offline, sabotage_on=False, with_packs=False, quiet=True):
+    """Run the whole daily team under the tracer and grade every agent.
+    Used by main() below and by scheduler.py."""
     if not config.DB_PATH.exists():
         import data
         data.build()
-    saboteurs = sabotage(offline) if "--sabotage" in args else []
+    saboteurs = sabotage(offline) if sabotage_on else []
     install_tracer()
-    run_team.HOOKS.append(hook)
-
-    run_team.say = lambda msg: None                      # keep the console for the scorecard
-    print(f"Running the team ({'offline rule-based' if offline else config.MODEL}"
-          f"{', WITH SABOTAGE' if saboteurs else ''})...")
+    if hook not in run_team.HOOKS:
+        run_team.HOOKS.append(hook)
+    if quiet:
+        run_team.say = lambda msg: None
     findings = run_team.run_specialists(offline)
     draft, review = run_team.write_and_review(findings, offline)
-    run_team.plan_team(findings, draft, offline)
-
+    team = run_team.plan_team(findings, draft, offline)
     results = [grade(k) for k in JOBS if k in TRACE["outputs"]]
     guard_reviewer(results)
-    packs = run_packs_guard(offline) if (offline or "--packs" in args) else []
+    packs = run_packs_guard(offline) if with_packs else []
+    return {"findings": findings, "draft": draft, "review": review, "team": team, "results": results,
+            "packs": packs, "saboteurs": saboteurs, "all_passed": all(r["verdict"] == "PASS" for r in results)
+            and not any(issues for _, issues in packs)}
 
-    # ---- report ----
+
+def report_md(run, offline):
+    results, packs, saboteurs = run["results"], run["packs"], run["saboteurs"]
     lines = [f"# Agent audit -- {config.AS_OF_DATE} ({'offline' if offline else config.MODEL})",
              f"_Generated {datetime.now():%Y-%m-%d %H:%M}_", ""]
     if saboteurs:
@@ -365,16 +366,31 @@ def main():
         lines += [f"| {b} | {'✅ clean' if not issues else '❌ ' + '; '.join(issues)} |" for b, issues in packs]
     lines += ["", "## Tools each agent used", ""]
     lines += [f"- {r['agent']}: {', '.join(r['tools_used']) or '(none)'}" for r in results]
-    report = "\n".join(lines) + "\n"
+    return "\n".join(lines) + "\n"
 
+
+def save_report(run, offline):
     folder = config.OUT_DIR / config.AS_OF_DATE.isoformat() / "audit"
     folder.mkdir(parents=True, exist_ok=True)
-    name = "audit_report_sabotage.md" if saboteurs else "audit_report.md"
+    name = "audit_report_sabotage.md" if run["saboteurs"] else "audit_report.md"
+    report = report_md(run, offline)
     (folder / name).write_text(report)
     (folder / name.replace(".md", "_trace.json")).write_text(json.dumps(
         {k: [{"tool": c["tool"], "args": c["args"]} for c in v] for k, v in TRACE["calls"].items()}, indent=1, default=str))
+    return folder / name, report
+
+
+def main():
+    args = sys.argv[1:]
+    offline = "--offline" in args
+    if not offline and not os.environ.get("ANTHROPIC_API_KEY"):
+        sys.exit("Set ANTHROPIC_API_KEY first (or add --offline).")
+    print(f"Running the team ({'offline rule-based' if offline else config.MODEL}"
+          f"{', WITH SABOTAGE' if '--sabotage' in args else ''})...")
+    run = run_and_grade(offline, "--sabotage" in args, offline or "--packs" in args)
+    path, report = save_report(run, offline)
     print(report)
-    print(f"Saved {folder / name}")
+    print(f"Saved {path}")
 
 
 if __name__ == "__main__":

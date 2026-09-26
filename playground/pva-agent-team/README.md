@@ -100,6 +100,31 @@ stand-ins were calling tools outside their lane, the Coach added two numbers up 
 tool, and the Pricing agent labelled a *discount* change as a "rebate" change. All of these are now fixed.
 This is why you audit agents instead of trusting them.
 
+## Scheduler: every weekday morning, with you still in charge
+
+```bash
+python3 scheduler.py run --offline     # try it now: no key, no Slack (messages go to out/<date>/outbox/)
+python3 scheduler.py status
+python3 scheduler.py approve           # you've read it -> the Slack note goes to the team channel
+python3 scheduler.py install           # prints the cron line + the .env to create
+```
+
+```
+cron 08:47 ─> run team ─> audit every agent ─┬─ all pass ─> DM you "draft ready" ─> you: approve ─> team channel
+                                             └─ any fail ─> DM you "BLOCKED + why"  (approve refuses unless --force)
+```
+
+- **Your "draft, I approve" rule is enforced in code.** Only `approve` posts to the team channel. Drafts
+  go only to `SLACK_PRIVATE_WEBHOOK_URL` (you).
+- **The audit is a gate.** If any agent fails (skipped tools, untraceable numbers, a rubber-stamping
+  Reviewer), the draft is **blocked** and you get the reasons instead. `approve --force` exists for when
+  you've checked it yourself.
+- **Other safety checks:** it won't post twice in a day; a webhook that isn't `https://hooks.slack.com/...`
+  is refused *before* anything is marked approved; secrets live in a git-ignored `.env`.
+- **Where it runs:** on your machine (cron), not in GitHub Actions, so real company data never has to leave
+  your environment. For real use, point `data.py`/`tools.py` at your warehouse and set
+  `AS_OF_DATE = date.today()` in `config.py`.
+
 ## Periodic packs and the dashboard
 
 The same tools and Reviewer also power jobs you run weekly or monthly rather than daily.
@@ -236,6 +261,7 @@ A full run makes roughly 30–60 API calls on `claude-opus-5`. To try it cheaply
 | `dashboard.py` | The HTML dashboard |
 | `team_tools.py` | `team_roster`, `check_workload` for the Team Coach |
 | `audit.py` | Grades every agent on process, findings, evidence and guards; `--sabotage` plants corner-cutters |
+| `scheduler.py` | Daily run → audit gate → draft to you → `approve` → team channel (Slack webhooks, or a dry-run outbox) |
 
 ## Roadmap: the rest of your job, as agents
 
@@ -244,10 +270,9 @@ Built on the same pattern: tools do the math, agents do the reasoning, the Revie
 | Next agent | Would do | New tools it needs |
 |---|---|---|
 | **AOP Builder** | Build next year's AOP → MoP → DoD from history, seasonality and growth targets. The re-phasing half is already done by the Plan & Landing Analyst. | `build_aop`, seasonality fit |
-| **Scheduler** | Run the daily review every morning and post the approved Slack note | a scheduled job + Slack connector |
 
 ✅ Built so far: **Merchandising Analyst**, **MP Rebate Allocator**, **OR/SOR Pricing Optimizer**, **Plan & Landing Analyst**,
-**Brand Planner**, **Monthly Review Writer**, **dashboard**, **Team Coach**, **audit**.
+**Brand Planner**, **Monthly Review Writer**, **dashboard**, **Team Coach**, **audit**, **Scheduler**.
 
 Good next exercise: change `REBATE_TOPUP_INR` in `config.py`, or an elasticity in `data.py`
 (e.g. make Trekko 5.0), and see whether the Rebate Allocator changes its mind.
