@@ -18,6 +18,12 @@ Then try asking Claude things like:
 - "Explain what a Python function is, using `hello.py` as the example."
 - "Set up a `requirements.txt` for a small data analysis project using pandas."
 
+## Projects in here
+
+- [`agent-from-scratch/`](agent-from-scratch/): one AI agent with tools, built by hand, to learn the agent loop.
+- [`pva-agent-team/`](pva-agent-team/): a team of agents (Monitor, Funnel analyst, Pricing analyst, Writer,
+  Reviewer) that answers "why is PvA low?" on synthetic footwear data. You approve the draft at the end.
+
 ## The basic workflow, every time
 
 1. **Ask** for what you want in plain English (a feature, a fix, an explanation).
