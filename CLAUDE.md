@@ -17,6 +17,11 @@ programming) to experiment: small scripts, exercises, and examples while
 learning. Feel free to add to it, but keep experiments contained here
 rather than scattered into the topic folders above.
 
+`playground/khetsaathi/` is the owner's agri-services marketplace app (Node,
+no npm dependencies; business rules in `public/core.js`, shared by the server
+and the in-browser demo). Run `npm test` there after changing rules and
+`npm run build:demo` to refresh `dist/khetsaathi-demo.html`.
+
 ## `Portfolio Projects/`
 
 Resume/interview portfolio work for the repo owner (Manager, Analytics —

@@ -1,0 +1,11 @@
+{
+  "name": "KhetSaathi",
+  "short_name": "KhetSaathi",
+  "description": "Book tractors, farm workers, mechanics and experienced farmers near your village.",
+  "start_url": "./#home",
+  "display": "standalone",
+  "background_color": "#f1f4ec",
+  "theme_color": "#1f6b3a",
+  "lang": "hi",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

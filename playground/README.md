@@ -23,6 +23,9 @@ Then try asking Claude things like:
 - [`agent-from-scratch/`](agent-from-scratch/): one AI agent with tools, built by hand, to learn the agent loop.
 - [`pva-agent-team/`](pva-agent-team/): a team of agents (Monitor, Funnel analyst, Pricing analyst, Writer,
   Reviewer) that answers "why is PvA low?" on synthetic footwear data. You approve the draft at the end.
+- [`khetsaathi/`](khetsaathi/): an "Uber for farm help" marketplace (book a tractor, farm workers,
+  a mechanic or an experienced farmer). Web app + Node API + 32 tests + deploy kit + product plan.
+  Open `khetsaathi/dist/khetsaathi-demo.html` to try it with no install.
 
 ## The basic workflow, every time
 

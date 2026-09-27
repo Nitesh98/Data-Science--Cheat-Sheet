@@ -1,0 +1,1839 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KhetSaathi</title>
+<meta name="description" content="Book a tractor, farm workers, a mechanic or an experienced farmer near your village.">
+<meta name="theme-color" content="#1f6b3a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Mukta:wght@400;600;700&display=swap">
+<style>
+:root {
+  --bg: #f1f4ec; --surface: #ffffff; --surface-2: #e7ecdf; --ink: #17231a; --muted: #56655a; --line: #d3dbca;
+  --accent: #1f6b3a; --accent-2: #185a30; --accent-ink: #ffffff; --accent-soft: #e2efe4;
+  --wheat: #a86f00; --wheat-bg: #fbf0d4; --danger: #b3261e; --danger-bg: #fbe8e5; --info: #25568f; --info-bg: #e5eef9;
+  --shadow: 0 1px 2px rgba(23, 35, 26, .06), 0 4px 16px rgba(23, 35, 26, .06);
+  --display: "Baloo 2", "Mukta", system-ui, sans-serif;
+  --body: "Mukta", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1510; --surface: #16201a; --surface-2: #1e2a22; --ink: #e5ede3; --muted: #9baa9d; --line: #2b3a30;
+    --accent: #5dbb7d; --accent-2: #74c990; --accent-ink: #0b130d; --accent-soft: #183022;
+    --wheat: #e7b54c; --wheat-bg: #2a2413; --danger: #f2837a; --danger-bg: #3a1a17; --info: #8db8ec; --info-bg: #172637;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1510; --surface: #16201a; --surface-2: #1e2a22; --ink: #e5ede3; --muted: #9baa9d; --line: #2b3a30;
+  --accent: #5dbb7d; --accent-2: #74c990; --accent-ink: #0b130d; --accent-soft: #183022;
+  --wheat: #e7b54c; --wheat-bg: #2a2413; --danger: #f2837a; --danger-bg: #3a1a17; --info: #8db8ec; --info-bg: #172637;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.75rem; font-weight: 700; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--wheat); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: .875rem; }
+
+.shell { max-width: 520px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); margin-right: auto; }
+.brand-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; }
+.brand-mark svg { width: 22px; height: 22px; }
+.brand b { font-family: var(--display); font-size: 1.3rem; font-weight: 700; letter-spacing: -.01em; }
+.brand b span { color: var(--wheat); }
+.chip-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: .9rem; }
+.main { flex: 1; padding: 16px 16px 96px; display: flex; flex-direction: column; gap: 20px; }
+
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-in { max-width: 520px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 10px; text-decoration: none; color: var(--muted); font-size: .8rem; }
+.nav a .ic { font-size: 1.35rem; line-height: 1; }
+.nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
+
+.demo {
+  background: var(--wheat-bg); border: 1px dashed var(--wheat); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: .9rem;
+}
+.demo-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.demo b { color: var(--wheat); text-transform: uppercase; letter-spacing: .06em; font-size: .75rem; }
+.demo select { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+
+.hello { display: flex; flex-direction: column; gap: 4px; }
+.services { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.svc {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: var(--r); background: var(--surface);
+  border: 1px solid var(--line); text-decoration: none; color: var(--ink); box-shadow: var(--shadow); min-height: 150px;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.svc:hover { border-color: var(--accent); transform: translateY(-1px); }
+.svc .emo { font-size: 2.1rem; line-height: 1; width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); }
+.svc h3 { font-size: 1.1rem; }
+.svc p { font-size: .82rem; color: var(--muted); line-height: 1.35; }
+.svc .from { margin-top: auto; font-size: .85rem; color: var(--wheat); font-weight: 600; }
+
+.section { display: flex; flex-direction: column; gap: 10px; }
+.section-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+a.card { text-decoration: none; color: var(--ink); }
+a.card:hover { border-color: var(--accent); }
+.row { display: flex; align-items: center; gap: 10px; }
+.row.between { justify-content: space-between; }
+.row.wrap { flex-wrap: wrap; }
+.bk-ic { font-size: 1.6rem; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--accent-soft); display: grid; place-items: center; }
+.bk-main { flex: 1; min-width: 0; }
+.bk-main h3 { overflow-wrap: anywhere; }
+.price { font-family: var(--display); font-weight: 700; font-size: 1.15rem; color: var(--ink); white-space: nowrap; }
+.empty { text-align: center; padding: 24px 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--r); }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st-requested { background: var(--wheat-bg); color: var(--wheat); }
+.st-confirmed { background: var(--info-bg); color: var(--info); }
+.st-in_progress { background: var(--accent-soft); color: var(--accent); }
+.st-completed { background: var(--surface-2); color: var(--muted); }
+.st-cancelled, .st-expired { background: var(--surface-2); color: var(--muted); }
+.st-disputed { background: var(--danger-bg); color: var(--danger); }
+
+form, .form { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .lbl { font-weight: 600; font-size: .95rem; }
+.hint { font-size: .82rem; color: var(--muted); }
+input[type="text"], input[type="tel"], input[type="date"], input[type="number"], select, textarea {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); min-height: 48px;
+}
+textarea { min-height: 72px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.otp-input { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; }
+
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice span { display: block; padding: 9px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: .95rem; }
+.choice input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.choice input:focus-visible + span { outline: 3px solid var(--wheat); outline-offset: 2px; }
+.choice small { display: block; font-size: .78rem; color: var(--muted); font-weight: 400; }
+
+.stepper { display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); width: max-content; }
+.stepper button { width: 52px; height: 48px; border: 0; background: none; font-size: 1.4rem; cursor: pointer; color: var(--accent); }
+.stepper button:disabled { color: var(--line); cursor: default; }
+.stepper output { min-width: 96px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.btn {
+  display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 50px; padding: 10px 18px; border-radius: 12px;
+  border: 1px solid transparent; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 1rem; cursor: pointer; text-decoration: none; text-align: center;
+}
+.btn:hover { background: var(--accent-2); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.block { width: 100%; }
+.btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover { border-color: var(--accent); }
+.btn.danger { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.btn.sm { min-height: 38px; padding: 6px 12px; font-size: .9rem; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row > .btn { flex: 1 1 140px; }
+
+.quote { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.qline { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.qline.total { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 2px; font-weight: 700; font-size: 1.1rem; }
+.qline.total span:last-child { font-family: var(--display); font-size: 1.35rem; }
+.avail { font-size: .88rem; color: var(--accent); font-weight: 600; }
+.note { border-radius: 12px; padding: 10px 12px; font-size: .9rem; }
+.note.warn { background: var(--wheat-bg); color: var(--ink); border-left: 4px solid var(--wheat); }
+.note.err { background: var(--danger-bg); color: var(--danger); }
+.note.ok { background: var(--accent-soft); color: var(--ink); border-left: 4px solid var(--accent); }
+.note.info { background: var(--info-bg); color: var(--ink); border-left: 4px solid var(--info); }
+
+.pin { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--ink); color: var(--bg); border-radius: var(--r); padding: 14px 16px; }
+.pin b { font-family: var(--display); font-size: 2.2rem; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
+.pin p { font-size: .85rem; opacity: .85; max-width: 22ch; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: .95rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.phone { font-variant-numeric: tabular-nums; font-weight: 700; user-select: all; }
+
+.timeline { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.timeline li { position: relative; font-size: .9rem; }
+.timeline li::before { content: ""; position: absolute; left: -20px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.timeline time { display: block; font-size: .78rem; color: var(--muted); }
+
+.stars { display: flex; gap: 4px; }
+.stars label { font-size: 2rem; cursor: pointer; color: var(--line); line-height: 1; }
+.stars input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.stars label.on { color: var(--wheat); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.tile .v { font-family: var(--display); font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile .k { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.switch { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.switch input { width: 46px; height: 26px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; transition: background .15s; flex: none; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(20px); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .85rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; z-index: 20; max-width: calc(100% - 32px); font-size: .95rem; box-shadow: var(--shadow); }
+.back { text-decoration: none; font-size: .95rem; }
+.hero-login { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+.hero-login h1 { font-size: 2rem; }
+.icons-strip { display: flex; gap: 10px; font-size: 1.8rem; }
+.icons-strip span { width: 54px; height: 54px; border-radius: 14px; background: var(--accent-soft); display: grid; place-items: center; }
+.loading { padding: 40px 0; text-align: center; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 360px) { .services { grid-template-columns: 1fr; } }
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <a class="brand" href="#home" aria-label="KhetSaathi home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><path d="M12 13c0-3.5 2.5-6 7-6 0 3.5-2.5 6-7 6Z" fill="#e7b54c" stroke="#e7b54c"/><path d="M12 11C12 7.7 9.8 5 5 5c0 3.3 2.2 6 7 6Z" fill="#fff"/><path d="M4 21h16"/></svg>
+      </span>
+      <b>Khet<span>Saathi</span></b>
+    </a>
+    <button class="chip-btn" id="lang-btn" data-act="lang" type="button">English</button>
+    <button class="chip-btn" id="out-btn" data-act="logout" type="button" hidden>⎋</button>
+  </header>
+  <main class="main" id="view"><div class="loading">Loading…</div></main>
+  <nav class="nav" id="nav" hidden><div class="nav-in" id="nav-in"></div></nav>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+/*
+ * KhetSaathi core: every business rule of the marketplace lives here.
+ *
+ * The same file runs in two places:
+ *   - Node (server.js), behind a real HTTP API, persisted to a JSON file.
+ *   - The browser, in "demo mode", persisted to localStorage (used for the
+ *     hosted demo, where there is no server).
+ * Both call app.handle(method, path, body, token), so the rules are tested once.
+ *
+ * No dependencies. Money is whole rupees. Times are epoch ms; dates/slots are IST.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.KhetCore = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const MIN = 60e3;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+  const IST_OFFSET = 5.5 * HOUR;
+
+  // ---------------------------------------------------------------- catalogue
+
+  const RULES = {
+    platformFeePct: 0.05, platformFeeMin: 10, platformFeeMax: 99,
+    freeTravelKm: 5, travelPerKm: 15, assumedTravelKm: 15,
+    cancelFeePerProvider: 50, lateWindowHours: 12,
+    noShowGraceHours: 2, maxStrikes: 3,
+    bookingHorizonDays: 30, disputeWindowHours: 48,
+    maxActiveBookings: 10, maxPinFailures: 5, pinLockMinutes: 15,
+    earlyStartHours: 1,
+  };
+
+  const SLOTS = {
+    morning: { start: 6, end: 11, factor: 0.6, en: 'Morning 6–11 AM', hi: 'सुबह 6–11 बजे' },
+    afternoon: { start: 12, end: 17, factor: 0.6, en: 'Afternoon 12–5 PM', hi: 'दोपहर 12–5 बजे' },
+    full: { start: 6, end: 17, factor: 1, en: 'Full day 6 AM–5 PM', hi: 'पूरा दिन 6–5 बजे' },
+  };
+
+  // perSlotHour caps quantity by what fits in the slot (a tractor ploughs ~1.5 acres/hour).
+  const UNITS = {
+    acre: { min: 0.5, max: 50, step: 0.5, perSlotHour: 1.5, slotPriced: false, adjustable: true, en: 'acres', hi: 'एकड़' },
+    hour: { min: 1, max: 12, step: 1, perSlotHour: 1, slotPriced: false, adjustable: true, en: 'hours', hi: 'घंटे' },
+    worker_day: { min: 1, max: 20, step: 1, slotPriced: true, adjustable: false, en: 'workers', hi: 'मज़दूर' },
+    day: { min: 1, max: 1, step: 1, slotPriced: true, adjustable: false, en: 'day', hi: 'दिन' },
+    visit: { min: 1, max: 1, step: 1, slotPriced: false, adjustable: false, en: 'visit', hi: 'विज़िट' },
+  };
+
+  const SERVICES = {
+    tractor: {
+      icon: '🚜', en: 'Tractor', hi: 'ट्रैक्टर', radiusKm: 25, travel: true,
+      tagline: { en: 'With driver, for ploughing, sowing, harvest, transport', hi: 'ड्राइवर के साथ — जुताई, बुवाई, कटाई, ढुलाई' },
+      tasks: {
+        plough: { en: 'Ploughing (cultivator)', hi: 'जुताई (कल्टीवेटर)', unit: 'acre', rate: 1200 },
+        rotavator: { en: 'Rotavator', hi: 'रोटावेटर', unit: 'acre', rate: 1400 },
+        sowing: { en: 'Sowing (seed drill)', hi: 'बुवाई (सीड ड्रिल)', unit: 'acre', rate: 1000 },
+        harvester: { en: 'Harvesting (combine)', hi: 'कटाई (कंबाइन)', unit: 'acre', rate: 2200 },
+        trolley: { en: 'Trolley transport', hi: 'ट्रॉली ढुलाई', unit: 'hour', rate: 700 },
+      },
+    },
+    labour: {
+      icon: '👷', en: 'Farm workers', hi: 'खेत मज़दूर', radiusKm: 10, travel: false, multi: true,
+      tagline: { en: 'Daily workers for weeding, watering, transplanting, cutting', hi: 'निराई, सिंचाई, रोपाई, कटाई के लिए दिहाड़ी मज़दूर' },
+      tasks: {
+        weeding: { en: 'Weeding', hi: 'निराई', unit: 'worker_day', rate: 450 },
+        irrigation: { en: 'Watering / irrigation', hi: 'सिंचाई', unit: 'worker_day', rate: 450 },
+        transplanting: { en: 'Paddy transplanting', hi: 'धान रोपाई', unit: 'worker_day', rate: 500 },
+        harvesting: { en: 'Crop cutting', hi: 'फसल कटाई', unit: 'worker_day', rate: 500 },
+        spraying: { en: 'Pesticide spraying', hi: 'दवा छिड़काव', unit: 'worker_day', rate: 500 },
+        general: { en: 'General field work', hi: 'खेत का सामान्य काम', unit: 'worker_day', rate: 450 },
+      },
+    },
+    mechanic: {
+      icon: '🔧', en: 'Mechanic', hi: 'मिस्त्री', radiusKm: 25, travel: true,
+      tagline: { en: 'Comes to your field. Visit fee now, parts billed on site', hi: 'खेत पर आएगा। विज़िट फीस अभी, पुर्ज़े मौके पर' },
+      tasks: {
+        tractor_repair: { en: 'Tractor repair', hi: 'ट्रैक्टर मरम्मत', unit: 'visit', rate: 300, billable: true },
+        pump_repair: { en: 'Pump / motor repair', hi: 'पंप / मोटर मरम्मत', unit: 'visit', rate: 250, billable: true },
+        equipment_repair: { en: 'Sprayer / equipment repair', hi: 'स्प्रेयर / उपकरण मरम्मत', unit: 'visit', rate: 250, billable: true },
+      },
+    },
+    farmer: {
+      icon: '👨‍🌾', en: 'Experienced farmer', hi: 'अनुभवी किसान', radiusKm: 15, travel: false,
+      tagline: { en: 'Runs your field for the day, or advises on your crop', hi: 'दिनभर खेत संभाले, या फसल पर सलाह दे' },
+      tasks: {
+        field_manager: { en: 'Look after my field for the day', hi: 'दिनभर खेत की देखरेख', unit: 'day', rate: 700 },
+        crop_advice: { en: 'Crop advice visit', hi: 'फसल सलाह विज़िट', unit: 'visit', rate: 300 },
+      },
+    },
+  };
+
+  // Pilot cluster: villages/blocks around Gorakhpur, UP (approximate coordinates).
+  const VILLAGES = [
+    { id: 'gkp', en: 'Gorakhpur (city)', hi: 'गोरखपुर (शहर)', lat: 26.7606, lng: 83.3732 },
+    { id: 'pipraich', en: 'Pipraich', hi: 'पिपराइच', lat: 26.8276, lng: 83.5270 },
+    { id: 'chauri', en: 'Chauri Chaura', hi: 'चौरी चौरा', lat: 26.6440, lng: 83.5820 },
+    { id: 'sahjanwa', en: 'Sahjanwa', hi: 'सहजनवा', lat: 26.7530, lng: 83.2140 },
+    { id: 'campierganj', en: 'Campierganj', hi: 'कैम्पियरगंज', lat: 26.9900, lng: 83.2600 },
+    { id: 'bhathat', en: 'Bhathat', hi: 'भटहट', lat: 26.8700, lng: 83.4000 },
+    { id: 'khorabar', en: 'Khorabar', hi: 'खोराबार', lat: 26.7100, lng: 83.4000 },
+    { id: 'jungle', en: 'Jungle Kauria', hi: 'जंगल कौड़िया', lat: 26.8000, lng: 83.4700 },
+    { id: 'bansgaon', en: 'Bansgaon', hi: 'बांसगांव', lat: 26.5530, lng: 83.3530 },
+  ];
+
+  const ACTIVE = new Set(['requested', 'confirmed', 'in_progress']);
+
+  // ------------------------------------------------------------------ helpers
+
+  class AppError extends Error {
+    constructor(status, code, message) { super(message); this.status = status; this.code = code; }
+  }
+  const bad = (code, msg) => new AppError(400, code, msg);
+  const forbidden = (msg) => new AppError(403, 'FORBIDDEN', msg || 'You are not allowed to do this.');
+  const notFound = (what) => new AppError(404, 'NOT_FOUND', `${what} not found.`);
+  const conflict = (code, msg) => new AppError(409, code, msg);
+
+  const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+  const round1 = (x) => Math.round(x * 10) / 10;
+
+  function haversineKm(a, b) {
+    const R = 6371, toRad = (d) => d * Math.PI / 180;
+    const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  function normPhone(raw) {
+    let p = String(raw == null ? '' : raw).replace(/[\s-]/g, '');
+    if (p.startsWith('+91')) p = p.slice(3);
+    else if (p.length === 12 && p.startsWith('91')) p = p.slice(2);
+    else if (p.length === 11 && p.startsWith('0')) p = p.slice(1);
+    if (!/^[6-9]\d{9}$/.test(p)) throw bad('BAD_PHONE', 'Enter a valid 10-digit Indian mobile number.');
+    return p;
+  }
+
+  function todayIST(t) { return new Date(t + IST_OFFSET).toISOString().slice(0, 10); }
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function istTime(dateStr, hour) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return Date.UTC(y, m - 1, d, hour) - IST_OFFSET;
+  }
+  function slotStart(b) { return istTime(b.date, SLOTS[b.slot].start); }
+  function slotEnd(b) { return istTime(b.date, SLOTS[b.slot].end); }
+  function slotsOverlap(a, b) { return a === 'full' || b === 'full' || a === b; }
+
+  function validDate(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00Z');
+    return !isNaN(d) && d.toISOString().slice(0, 10) === s;
+  }
+
+  function getTask(serviceId, taskId) {
+    const service = SERVICES[serviceId];
+    if (!service) throw bad('BAD_SERVICE', 'Choose a service.');
+    const task = service.tasks[taskId];
+    if (!task) throw bad('BAD_TASK', 'Choose a type of work for this service.');
+    return { service, task };
+  }
+
+  function getVillage(id) {
+    const v = VILLAGES.find((x) => x.id === id);
+    if (!v) throw bad('BAD_VILLAGE', 'Choose your village from the list.');
+    return v;
+  }
+
+  function nearestVillage(lat, lng) {
+    let best = null, bestD = Infinity;
+    for (const v of VILLAGES) {
+      const d = haversineKm({ lat, lng }, v);
+      if (d < bestD) { best = v; bestD = d; }
+    }
+    return { village: best, distanceKm: round1(bestD) };
+  }
+
+  function maxQuantity(task, slotKey) {
+    const unit = UNITS[task.unit];
+    if (!unit.perSlotHour) return unit.max;
+    const s = SLOTS[slotKey];
+    const cap = Math.floor(((s.end - s.start) * unit.perSlotHour) / unit.step) * unit.step;
+    return Math.min(unit.max, cap);
+  }
+
+  function validateQuantity(task, slotKey, raw) {
+    const unit = UNITS[task.unit];
+    const q = raw == null || raw === '' ? unit.min : Number(raw);
+    if (!Number.isFinite(q)) throw bad('BAD_QUANTITY', `Enter the number of ${unit.en}.`);
+    const max = maxQuantity(task, slotKey);
+    if (q < unit.min) throw bad('BAD_QUANTITY', `Minimum is ${unit.min} ${unit.en}.`);
+    if (q > max) {
+      throw bad('BAD_QUANTITY', unit.perSlotHour
+        ? `At most ${max} ${unit.en} fit in this time slot. Pick a full day or split it into two bookings.`
+        : `At most ${max} ${unit.en} per booking.`);
+    }
+    if (Math.abs(q / unit.step - Math.round(q / unit.step)) > 1e-9) throw bad('BAD_QUANTITY', `Quantity must be in steps of ${unit.step}.`);
+    return q;
+  }
+
+  function computePrice(serviceId, taskId, qty, slotKey, travelKm, dues, extra) {
+    const { service, task } = getTask(serviceId, taskId);
+    const unit = UNITS[task.unit];
+    const slotFactor = unit.slotPriced ? SLOTS[slotKey].factor : 1;
+    const base = Math.round(task.rate * qty * slotFactor);
+    const km = service.travel ? travelKm : 0;
+    const travel = service.travel ? Math.round(Math.max(0, km - RULES.freeTravelKm) * RULES.travelPerKm) : 0;
+    const work = base + (extra || 0);
+    const platformFee = clamp(Math.round(work * RULES.platformFeePct), RULES.platformFeeMin, RULES.platformFeeMax);
+    return {
+      rate: task.rate, unit: task.unit, quantity: qty, slotFactor, base, extra: extra || 0,
+      travelKm: round1(km), travel, platformFee, dues: dues || 0,
+      providerPayout: work + travel, total: work + travel + platformFee + (dues || 0),
+    };
+  }
+
+  function createEmptyStore() {
+    return { version: 1, seq: 1000, users: {}, providers: {}, bookings: {}, otps: {}, sessions: {} };
+  }
+
+  function defaultRandInt(n) {
+    const c = typeof globalThis !== 'undefined' && globalThis.crypto;
+    if (c && c.getRandomValues) return c.getRandomValues(new Uint32Array(1))[0] % n;
+    return Math.floor(Math.random() * n);
+  }
+
+  // ---------------------------------------------------------------------- app
+
+  function createApp(opts) {
+    opts = opts || {};
+    const now = opts.now || (() => Date.now());
+    const store = opts.store || createEmptyStore();
+    const devMode = opts.devMode !== false;
+    const adminPhones = new Set(opts.adminPhones || ['9999999999']);
+    const randInt = opts.randInt || defaultRandInt;
+
+    const nextId = (prefix) => prefix + (++store.seq);
+    const digits = (n) => { let s = String(1 + randInt(9)); while (s.length < n) s += randInt(10); return s; };
+    const hex = (n) => { let s = ''; for (let i = 0; i < n; i++) s += '0123456789abcdef'[randInt(16)]; return s; };
+
+    function log(b, status, note) {
+      b.history.push({ at: now(), status, note: note || '' });
+      b.status = status;
+    }
+
+    // ---- users & auth
+
+    function findUserByPhone(phone) {
+      return Object.values(store.users).find((u) => u.phone === phone) || null;
+    }
+
+    function cleanName(name, phone) {
+      const n = String(name == null ? '' : name).trim().replace(/\s+/g, ' ');
+      if (!n) return 'Kisan ' + phone.slice(-4);
+      if (n.length < 2 || n.length > 40) throw bad('BAD_NAME', 'Name should be 2 to 40 characters.');
+      return n;
+    }
+
+    function createUser(phone, name) {
+      const u = { id: nextId('U'), phone, name: cleanName(name, phone), dues: 0, createdAt: now() };
+      store.users[u.id] = u;
+      return u;
+    }
+
+    function isAdmin(u) { return !!u && adminPhones.has(u.phone); }
+
+    function issueSession(user) {
+      const token = hex(32);
+      store.sessions[token] = { userId: user.id, expiresAt: now() + 30 * DAY };
+      return { token, user: userView(user) };
+    }
+
+    function authUser(token) {
+      if (!token) return null;
+      const s = store.sessions[token];
+      if (!s) return null;
+      if (now() > s.expiresAt) { delete store.sessions[token]; return null; }
+      return store.users[s.userId] || null;
+    }
+
+    function requestOtp(body) {
+      const phone = normPhone(body.phone);
+      const t = now();
+      const prev = store.otps[phone];
+      const recent = ((prev && prev.sent) || []).filter((x) => t - x < 10 * MIN);
+      if (recent.length >= 3) throw new AppError(429, 'OTP_RATE_LIMIT', 'Too many OTP requests. Try again in 10 minutes.');
+      const code = digits(6);
+      store.otps[phone] = { code, expiresAt: t + 5 * MIN, attempts: 0, sent: recent.concat(t) };
+      // Production: send `code` via an SMS gateway (e.g. MSG91) here, never in the response.
+      const res = { sent: true, isNewUser: !findUserByPhone(phone) };
+      if (devMode) res.devOtp = code;
+      return res;
+    }
+
+    function verifyOtp(body) {
+      const phone = normPhone(body.phone);
+      const rec = store.otps[phone];
+      if (!rec || !rec.code || now() > rec.expiresAt) throw bad('OTP_EXPIRED', 'OTP expired or not requested. Ask for a new OTP.');
+      if (String(body.code || '').trim() !== rec.code) {
+        rec.attempts += 1;
+        if (rec.attempts >= 5) { rec.code = null; throw bad('OTP_LOCKED', 'Too many wrong tries. Ask for a new OTP.'); }
+        throw bad('OTP_WRONG', `Wrong OTP. ${5 - rec.attempts} tries left.`);
+      }
+      rec.code = null;
+      const user = findUserByPhone(phone) || createUser(phone, body.name);
+      return issueSession(user);
+    }
+
+    function demoLogin(body) {
+      if (!devMode) throw notFound('Route');
+      const phone = normPhone(body.phone);
+      const user = findUserByPhone(phone) || createUser(phone, body.name);
+      return issueSession(user);
+    }
+
+    function logout(token) { delete store.sessions[token]; return { ok: true }; }
+
+    function updateMe(user, body) {
+      if (body.name != null) user.name = cleanName(body.name, user.phone);
+      return userView(user);
+    }
+
+    function ratingOf(p) { return p.ratingCount ? round1(p.ratingSum / p.ratingCount) : null; }
+
+    function providerView(p) {
+      if (!p) return null;
+      const v = VILLAGES.find((x) => x.id === p.villageId);
+      return {
+        type: p.type, skills: p.skills.slice(), villageId: p.villageId, village: v ? { id: v.id, en: v.en, hi: v.hi } : null,
+        radiusKm: p.radiusKm, vehicle: p.vehicle || '', verified: p.verified, suspended: p.suspended,
+        online: p.online, strikes: p.strikes, rating: ratingOf(p), ratingCount: p.ratingCount, jobsDone: p.jobsDone,
+      };
+    }
+
+    function userView(u) {
+      return { id: u.id, phone: u.phone, name: u.name, dues: u.dues, isAdmin: isAdmin(u), provider: providerView(store.providers[u.id]) };
+    }
+
+    // ---- providers
+
+    function registerProvider(user, body) {
+      const existing = store.providers[user.id];
+      const type = existing ? existing.type : body.type;
+      const service = SERVICES[type];
+      if (!service) throw bad('BAD_SERVICE', 'Choose what you offer: tractor, farm work, mechanic, or experienced farmer.');
+      if (existing && body.type && body.type !== existing.type) {
+        throw conflict('TYPE_LOCKED', 'Service type cannot be changed. Contact support to switch.');
+      }
+      const skills = Array.isArray(body.skills) ? Array.from(new Set(body.skills)) : [];
+      if (!skills.length) throw bad('BAD_SKILLS', 'Pick at least one type of work you can do.');
+      for (const s of skills) if (!service.tasks[s]) throw bad('BAD_SKILLS', `Unknown work type: ${s}.`);
+      const village = getVillage(body.villageId);
+      const radiusKm = body.radiusKm == null ? service.radiusKm : Number(body.radiusKm);
+      if (!Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > service.radiusKm) {
+        throw bad('BAD_RADIUS', `Travel distance must be between 1 and ${service.radiusKm} km.`);
+      }
+      const vehicle = String(body.vehicle || '').trim().slice(0, 60);
+      if (type === 'tractor' && !vehicle) throw bad('BAD_VEHICLE', 'Enter your tractor model and number, e.g. "Mahindra 575, UP53 AB 1234".');
+      if (body.name) user.name = cleanName(body.name, user.phone);
+      const p = existing || {
+        userId: user.id, type, verified: false, suspended: false, online: true,
+        strikes: 0, ratingSum: 0, ratingCount: 0, jobsDone: 0, createdAt: now(),
+      };
+      Object.assign(p, { skills, villageId: village.id, lat: village.lat, lng: village.lng, radiusKm, vehicle });
+      store.providers[user.id] = p;
+      return userView(user);
+    }
+
+    function requireProvider(user) {
+      const p = store.providers[user.id];
+      if (!p) throw forbidden('Register as a service provider first.');
+      return p;
+    }
+
+    function setOnline(user, body) {
+      const p = requireProvider(user);
+      p.online = !!body.online;
+      return providerView(p);
+    }
+
+    function activeAssignments(b) { return b.assignments.filter((a) => a.status === 'active'); }
+    function isAssigned(b, userId) { return activeAssignments(b).some((a) => a.providerId === userId); }
+
+    function providerBusy(p, date, slot, exceptBookingId) {
+      return Object.values(store.bookings).some((b) =>
+        b.id !== exceptBookingId && ACTIVE.has(b.status) && b.date === date &&
+        slotsOverlap(b.slot, slot) && isAssigned(b, p.userId));
+    }
+
+    // Returns null when the provider may take the booking, else a reason string.
+    function whyCannotTake(p, b, opts2) {
+      const o = opts2 || {};
+      if (p.type !== b.service) return 'This job needs a different service.';
+      if (!p.skills.includes(b.task)) return 'You have not listed this type of work.';
+      if (!p.verified) return 'Your profile is waiting for verification.';
+      if (p.suspended) return 'Your account is suspended. Contact support.';
+      if (p.userId === b.customerId) return 'You cannot take your own booking.';
+      const v = getVillage(b.villageId);
+      const d = haversineKm(p, v);
+      if (d > Math.min(p.radiusKm, SERVICES[b.service].radiusKm)) return 'This field is outside your travel distance.';
+      if (!o.ignoreBusy && providerBusy(p, b.date, b.slot, b.id)) return 'You already have a job at this time.';
+      return null;
+    }
+
+    function candidates(serviceId, taskId, villageId, date, slot, customerId) {
+      const fake = { id: '__quote__', service: serviceId, task: taskId, villageId, date, slot, customerId };
+      const v = getVillage(villageId);
+      return Object.values(store.providers)
+        .filter((p) => p.online && !whyCannotTake(p, fake))
+        .map((p) => ({ p, km: haversineKm(p, v) }))
+        .sort((a, b) => a.km - b.km);
+    }
+
+    // ---- booking
+
+    function validateWhen(date, slot) {
+      if (!SLOTS[slot]) throw bad('BAD_SLOT', 'Choose a time: morning, afternoon or full day.');
+      if (!validDate(date)) throw bad('BAD_DATE', 'Choose a valid date.');
+      const t = now();
+      const last = addDays(todayIST(t), RULES.bookingHorizonDays);
+      if (date > last) throw bad('BAD_DATE', `You can book up to ${RULES.bookingHorizonDays} days ahead.`);
+      if (istTime(date, SLOTS[slot].start) <= t) throw bad('BAD_DATE', 'This time has already started or passed. Pick a later slot.');
+    }
+
+    function quote(user, body) {
+      const { service, task } = getTask(body.service, body.task);
+      validateWhen(body.date, body.slot);
+      const qty = validateQuantity(task, body.slot, body.quantity);
+      getVillage(body.villageId);
+      const c = candidates(body.service, body.task, body.villageId, body.date, body.slot, user && user.id);
+      const km = c.length ? c[0].km : RULES.assumedTravelKm;
+      const price = computePrice(body.service, body.task, qty, body.slot, km, user ? user.dues : 0);
+      const needed = service.multi ? qty : 1;
+      return {
+        price, availableProviders: c.length, needed,
+        travelEstimated: !!service.travel && !c.length,
+        warning: c.length === 0 ? 'No provider is free nearby right now. You can still book; we will alert providers as they come online.'
+          : c.length < needed ? `Only ${c.length} of ${needed} workers are free nearby right now. The rest may join later.` : null,
+        billable: !!task.billable,
+      };
+    }
+
+    function createBooking(user, body) {
+      const q = quote(user, body);
+      const active = Object.values(store.bookings).filter((b) => b.customerId === user.id && ACTIVE.has(b.status));
+      if (active.length >= RULES.maxActiveBookings) {
+        throw conflict('TOO_MANY_BOOKINGS', `You already have ${RULES.maxActiveBookings} open bookings. Finish or cancel one first.`);
+      }
+      const dup = active.find((b) => b.service === body.service && b.task === body.task && b.date === body.date &&
+        b.villageId === body.villageId && slotsOverlap(b.slot, body.slot));
+      if (dup) throw conflict('DUPLICATE_BOOKING', `You already booked this work for this time (${dup.id}).`);
+      const b = {
+        id: nextId('B'), customerId: user.id, service: body.service, task: body.task,
+        date: body.date, slot: body.slot, quantity: q.price.quantity, needed: q.needed,
+        villageId: body.villageId, landmark: String(body.landmark || '').trim().slice(0, 120),
+        notes: String(body.notes || '').trim().slice(0, 300),
+        assignments: [], status: 'requested', pin: digits(4), pinFailures: 0, pinLockedUntil: 0,
+        price: q.price, createdAt: now(), history: [], rescheduleCount: 0,
+        rating: null, dispute: null, cancel: null, startedAt: null, completedAt: null,
+      };
+      // Dues from an earlier late cancellation are collected with this booking.
+      user.dues = 0;
+      log(b, 'requested', q.availableProviders ? `Sent to ${q.availableProviders} nearby provider${q.availableProviders > 1 ? 's' : ''}` : 'Waiting for providers');
+      store.bookings[b.id] = b;
+      return bookingView(b, user);
+    }
+
+    function getBooking(id) {
+      const b = store.bookings[id];
+      if (!b) throw notFound('Booking');
+      return b;
+    }
+
+    function canSee(b, user) { return b.customerId === user.id || isAssigned(b, user.id) || isAdmin(user); }
+
+    function viewBooking(user, id) {
+      const b = getBooking(id);
+      if (!canSee(b, user)) {
+        const p = store.providers[user.id];
+        if (p && b.status === 'requested' && !whyCannotTake(p, b)) return offerView(b, p);
+        throw forbidden();
+      }
+      return bookingView(b, user);
+    }
+
+    function myBookings(user) {
+      return Object.values(store.bookings).filter((b) => b.customerId === user.id)
+        .sort((a, b) => b.createdAt - a.createdAt).map((b) => bookingView(b, user));
+    }
+
+    function restoreDues(b) {
+      if (b.price.dues) store.users[b.customerId].dues += b.price.dues;
+    }
+
+    function strike(p, reason) {
+      p.strikes += 1;
+      if (p.strikes >= RULES.maxStrikes) p.suspended = true;
+      return reason;
+    }
+
+    function cancelBooking(user, id, body) {
+      const b = getBooking(id);
+      if (b.customerId !== user.id && !isAdmin(user)) throw forbidden('Only the person who booked can cancel.');
+      if (!['requested', 'confirmed'].includes(b.status)) throw conflict('BAD_STATE', `A ${b.status.replace('_', ' ')} booking cannot be cancelled.`);
+      const t = now();
+      const start = slotStart(b);
+      const assigned = activeAssignments(b);
+      let fee = 0, note;
+      if (assigned.length && t > start + RULES.noShowGraceHours * HOUR) {
+        for (const a of assigned) strike(store.providers[a.providerId], 'no_show');
+        note = 'Provider did not arrive; cancelled free';
+      } else if (assigned.length && start - t < RULES.lateWindowHours * HOUR && !isAdmin(user)) {
+        fee = RULES.cancelFeePerProvider * assigned.length;
+        note = `Late cancellation fee ₹${fee}, added to your next booking`;
+      } else {
+        note = 'Cancelled free';
+      }
+      restoreDues(b);
+      store.users[b.customerId].dues += fee;
+      b.cancel = { by: user.id, at: t, reason: String((body && body.reason) || '').slice(0, 200), fee };
+      for (const a of assigned) a.status = 'released';
+      log(b, 'cancelled', note);
+      return bookingView(b, user);
+    }
+
+    function rescheduleBooking(user, id, body) {
+      const b = getBooking(id);
+      if (b.customerId !== user.id) throw forbidden('Only the person who booked can change the date.');
+      if (!['requested', 'confirmed'].includes(b.status)) throw conflict('BAD_STATE', 'Only a booking that has not started can be moved.');
+      if (b.rescheduleCount >= 1) throw conflict('RESCHEDULE_LIMIT', 'A booking can be moved only once. Cancel and book again instead.');
+      validateWhen(body.date, body.slot);
+      const { task } = getTask(b.service, b.task);
+      validateQuantity(task, body.slot, b.quantity);
+      if (body.date === b.date && body.slot === b.slot) throw bad('SAME_TIME', 'Pick a different date or time.');
+      b.date = body.date; b.slot = body.slot; b.rescheduleCount += 1;
+      const dues = b.price.dues;
+      b.price = computePrice(b.service, b.task, b.quantity, b.slot, b.price.travelKm, dues);
+      let released = 0;
+      for (const a of activeAssignments(b)) {
+        if (providerBusy(store.providers[a.providerId], b.date, b.slot, b.id)) { a.status = 'released'; released++; }
+      }
+      const filled = activeAssignments(b).length;
+      log(b, filled >= b.needed ? 'confirmed' : 'requested',
+        `Moved to ${b.date}, ${SLOTS[b.slot].en}` + (released ? `; ${released} provider(s) not free, finding replacements` : ''));
+      return bookingView(b, user);
+    }
+
+    function acceptBooking(user, id) {
+      const p = requireProvider(user);
+      const b = getBooking(id);
+      if (isAssigned(b, user.id)) throw conflict('ALREADY_ACCEPTED', 'You have already accepted this job.');
+      if (b.status !== 'requested') throw conflict('NOT_OPEN', 'This job is no longer open. Another provider may have taken it.');
+      const why = whyCannotTake(p, b);
+      if (why) throw conflict('CANNOT_TAKE', why);
+      const prior = b.assignments.find((a) => a.providerId === user.id);
+      if (prior && prior.status === 'withdrawn') throw conflict('WITHDREW', 'You withdrew from this job earlier and cannot rejoin.');
+      if (prior) prior.status = 'active'; else b.assignments.push({ providerId: user.id, status: 'active', at: now() });
+      const filled = activeAssignments(b).length;
+      if (filled >= b.needed) log(b, 'confirmed', `${user.name} accepted`);
+      else b.history.push({ at: now(), status: 'requested', note: `${user.name} accepted (${filled}/${b.needed})` });
+      return bookingView(b, user);
+    }
+
+    function withdrawBooking(user, id) {
+      const p = requireProvider(user);
+      const b = getBooking(id);
+      const a = b.assignments.find((x) => x.providerId === user.id && x.status === 'active');
+      if (!a || !['requested', 'confirmed'].includes(b.status)) throw conflict('BAD_STATE', 'You can only withdraw from a job you accepted that has not started.');
+      a.status = 'withdrawn';
+      const late = slotStart(b) - now() < RULES.lateWindowHours * HOUR;
+      if (late) strike(p, 'late_withdraw');
+      log(b, 'requested', `${user.name} withdrew${late ? ' (late: 1 strike)' : ''}; finding a replacement`);
+      return { ok: true, strikes: p.strikes, suspended: p.suspended };
+    }
+
+    function startBooking(user, id, body) {
+      const b = getBooking(id);
+      if (!isAssigned(b, user.id)) throw forbidden('Only a provider on this job can start it.');
+      const assigned = activeAssignments(b);
+      const partial = b.status === 'requested' && assigned.length > 0 && SERVICES[b.service].multi;
+      if (b.status !== 'confirmed' && !partial) throw conflict('BAD_STATE', 'This job cannot be started now.');
+      const t = now();
+      if (t < slotStart(b) - RULES.earlyStartHours * HOUR) throw conflict('TOO_EARLY', 'You can start the job from one hour before the booked time.');
+      if (t < b.pinLockedUntil) throw new AppError(429, 'PIN_LOCKED', 'Too many wrong PINs. Try again in 15 minutes.');
+      if (String((body && body.pin) || '').trim() !== b.pin) {
+        b.pinFailures += 1;
+        if (b.pinFailures >= RULES.maxPinFailures) { b.pinFailures = 0; b.pinLockedUntil = t + RULES.pinLockMinutes * MIN; }
+        throw bad('PIN_WRONG', 'Wrong PIN. Ask the customer for the 4-digit start PIN.');
+      }
+      if (partial) {
+        // Start with the workers who came; the price follows the actual headcount.
+        b.quantity = assigned.length; b.needed = assigned.length;
+        b.price = computePrice(b.service, b.task, b.quantity, b.slot, b.price.travelKm, b.price.dues);
+      }
+      b.startedAt = t;
+      log(b, 'in_progress', partial ? `Started with ${assigned.length} worker(s)` : 'Work started');
+      return bookingView(b, user);
+    }
+
+    function completeBooking(user, id, body) {
+      body = body || {};
+      const b = getBooking(id);
+      if (!isAssigned(b, user.id)) throw forbidden('Only a provider on this job can complete it.');
+      if (b.status !== 'in_progress') throw conflict('BAD_STATE', 'Start the job with the customer PIN first.');
+      const { task } = getTask(b.service, b.task);
+      const unit = UNITS[task.unit];
+      let qty = b.quantity, extra = 0;
+      if (unit.adjustable && body.quantity != null) {
+        qty = Number(body.quantity);
+        if (!Number.isFinite(qty) || qty < unit.step || qty > b.quantity * 2) {
+          throw bad('BAD_QUANTITY', `Actual work must be between ${unit.step} and ${b.quantity * 2} ${unit.en}.`);
+        }
+        qty = Math.round(qty / unit.step) * unit.step;
+      }
+      if (task.billable && body.extra != null) {
+        extra = Number(body.extra);
+        if (!Number.isInteger(extra) || extra < 0 || extra > 50000) throw bad('BAD_EXTRA', 'Parts and labour must be a whole amount between ₹0 and ₹50,000.');
+      }
+      b.quantity = qty;
+      b.price = computePrice(b.service, b.task, qty, b.slot, b.price.travelKm, b.price.dues, extra);
+      b.completedAt = now();
+      for (const a of activeAssignments(b)) store.providers[a.providerId].jobsDone += 1;
+      log(b, 'completed', `Done. Collect ₹${b.price.total} in cash or UPI`);
+      return bookingView(b, user);
+    }
+
+    function rateBooking(user, id, body) {
+      const b = getBooking(id);
+      if (b.customerId !== user.id) throw forbidden('Only the customer can rate.');
+      if (b.status !== 'completed' && b.status !== 'disputed') throw conflict('BAD_STATE', 'You can rate after the work is completed.');
+      if (b.rating) throw conflict('ALREADY_RATED', 'You have already rated this job.');
+      const stars = Number(body && body.stars);
+      if (!Number.isInteger(stars) || stars < 1 || stars > 5) throw bad('BAD_RATING', 'Give 1 to 5 stars.');
+      b.rating = { stars, comment: String(body.comment || '').trim().slice(0, 300), at: now() };
+      for (const a of activeAssignments(b)) {
+        const p = store.providers[a.providerId];
+        p.ratingSum += stars; p.ratingCount += 1;
+      }
+      return bookingView(b, user);
+    }
+
+    function disputeBooking(user, id, body) {
+      const b = getBooking(id);
+      if (b.customerId !== user.id) throw forbidden('Only the customer can raise a complaint.');
+      if (b.status !== 'completed') throw conflict('BAD_STATE', 'You can raise a complaint only on completed work.');
+      if (now() - b.completedAt > RULES.disputeWindowHours * HOUR) throw conflict('DISPUTE_WINDOW', 'Complaints must be raised within 48 hours of completion.');
+      const reason = String((body && body.reason) || '').trim();
+      if (reason.length < 5) throw bad('BAD_REASON', 'Tell us what went wrong (at least 5 characters).');
+      b.dispute = { reason: reason.slice(0, 500), at: now(), resolution: null };
+      log(b, 'disputed', 'Complaint raised');
+      return bookingView(b, user);
+    }
+
+    // ---- provider views
+
+    function payoutShare(b) { return Math.round(b.price.providerPayout / Math.max(1, b.needed)); }
+
+    function providerJobs(user) {
+      const p = requireProvider(user);
+      const offers = p.online && p.verified && !p.suspended
+        ? Object.values(store.bookings)
+          .filter((b) => b.status === 'requested' && !b.assignments.some((a) => a.providerId === user.id) && !whyCannotTake(p, b))
+          .sort((a, b) => slotStart(a) - slotStart(b)).map((b) => offerView(b, p))
+        : [];
+      const mine = Object.values(store.bookings).filter((b) => isAssigned(b, user.id))
+        .sort((a, b) => slotStart(b) - slotStart(a)).map((b) => bookingView(b, user));
+      const earnings = mine.filter((b) => b.status === 'completed' || b.status === 'disputed')
+        .reduce((s, b) => s + b.payoutShare, 0);
+      return { provider: providerView(p), offers, jobs: mine, earnings };
+    }
+
+    function offerView(b, p) {
+      const v = getVillage(b.villageId);
+      const c = store.users[b.customerId];
+      return {
+        id: b.id, offer: true, service: b.service, task: b.task, date: b.date, slot: b.slot, quantity: b.quantity,
+        needed: b.needed, filled: activeAssignments(b).length, village: { id: v.id, en: v.en, hi: v.hi },
+        landmark: b.landmark, notes: b.notes, distanceKm: round1(haversineKm(p, v)), payoutShare: payoutShare(b),
+        customerName: c ? c.name.split(' ')[0] : '', status: b.status,
+      };
+    }
+
+    function bookingView(b, viewer) {
+      const v = getVillage(b.villageId);
+      const c = store.users[b.customerId];
+      const isCustomer = viewer && viewer.id === b.customerId;
+      const privileged = viewer && (isAssigned(b, viewer.id) || isAdmin(viewer));
+      const providers = activeAssignments(b).map((a) => {
+        const u = store.users[a.providerId], p = store.providers[a.providerId];
+        return { id: u.id, name: u.name, phone: u.phone, vehicle: p.vehicle || '', rating: ratingOf(p), jobsDone: p.jobsDone, distanceKm: round1(haversineKm(p, v)) };
+      });
+      return {
+        id: b.id, service: b.service, task: b.task, date: b.date, slot: b.slot, quantity: b.quantity,
+        needed: b.needed, filled: providers.length, village: { id: v.id, en: v.en, hi: v.hi },
+        landmark: b.landmark, notes: b.notes, status: b.status, price: b.price, payoutShare: payoutShare(b),
+        history: b.history, rescheduleCount: b.rescheduleCount, rating: b.rating, dispute: b.dispute, cancel: b.cancel,
+        createdAt: b.createdAt, startsAt: slotStart(b), endsAt: slotEnd(b), completedAt: b.completedAt,
+        pin: isCustomer ? b.pin : undefined,
+        providers: isCustomer || privileged ? providers : undefined,
+        customer: privileged ? { name: c.name, phone: c.phone } : undefined,
+        noShow: ['requested', 'confirmed'].includes(b.status) && providers.length > 0 && now() > slotStart(b) + RULES.noShowGraceHours * HOUR,
+        lateCancelFee: ['requested', 'confirmed'].includes(b.status) && providers.length > 0 &&
+          slotStart(b) - now() < RULES.lateWindowHours * HOUR && now() <= slotStart(b) + RULES.noShowGraceHours * HOUR
+          ? RULES.cancelFeePerProvider * providers.length : 0,
+      };
+    }
+
+    // ---- admin
+
+    function requireAdmin(user) { if (!isAdmin(user)) throw forbidden('Admins only.'); }
+
+    function adminOverview(user) {
+      requireAdmin(user);
+      const bookings = Object.values(store.bookings);
+      const byStatus = {};
+      for (const b of bookings) byStatus[b.status] = (byStatus[b.status] || 0) + 1;
+      const done = bookings.filter((b) => b.status === 'completed' || b.status === 'disputed');
+      const closed = bookings.filter((b) => !ACTIVE.has(b.status));
+      const filled = closed.filter((b) => b.startedAt);
+      const providers = Object.values(store.providers).map((p) => Object.assign({ id: p.userId, name: store.users[p.userId].name, phone: store.users[p.userId].phone }, providerView(p)));
+      const byService = {};
+      for (const b of bookings) byService[b.service] = (byService[b.service] || 0) + 1;
+      return {
+        totals: {
+          users: Object.keys(store.users).length, providers: providers.length, bookings: bookings.length,
+          gmv: done.reduce((s, b) => s + b.price.total, 0),
+          platformRevenue: done.reduce((s, b) => s + b.price.platformFee, 0),
+          fillRate: closed.length ? Math.round((filled.length / closed.length) * 100) : null,
+        },
+        byStatus, byService,
+        pendingProviders: providers.filter((p) => !p.verified),
+        suspendedProviders: providers.filter((p) => p.suspended),
+        disputes: bookings.filter((b) => b.status === 'disputed').map((b) => bookingView(b, user)),
+        recent: bookings.sort((a, b) => b.createdAt - a.createdAt).slice(0, 15).map((b) => bookingView(b, user)),
+      };
+    }
+
+    function adminVerify(user, id, body) {
+      requireAdmin(user);
+      const p = store.providers[id];
+      if (!p) throw notFound('Provider');
+      if (body.verified != null) p.verified = !!body.verified;
+      if (body.suspended != null) { p.suspended = !!body.suspended; if (!p.suspended) p.strikes = 0; }
+      return providerView(p);
+    }
+
+    function adminResolve(user, id, body) {
+      requireAdmin(user);
+      const b = getBooking(id);
+      if (b.status !== 'disputed') throw conflict('BAD_STATE', 'This booking has no open complaint.');
+      const refund = Number(body.refund || 0);
+      if (!Number.isInteger(refund) || refund < 0 || refund > b.price.total) throw bad('BAD_REFUND', `Refund must be a whole amount from ₹0 to ₹${b.price.total}.`);
+      b.dispute.resolution = { refund, note: String(body.note || '').slice(0, 300), at: now(), by: user.id };
+      log(b, 'completed', refund ? `Complaint resolved: ₹${refund} refunded` : 'Complaint resolved: no refund');
+      return bookingView(b, user);
+    }
+
+    // ---- housekeeping: run before every request (lazy, so no cron is needed)
+
+    function sweep() {
+      const t = now();
+      for (const b of Object.values(store.bookings)) {
+        if (b.status === 'requested') {
+          const n = activeAssignments(b).length;
+          if (n === 0 && t > slotStart(b) + RULES.noShowGraceHours * HOUR) { restoreDues(b); log(b, 'expired', 'No provider accepted in time'); }
+          else if (n > 0 && t > slotEnd(b)) { restoreDues(b); log(b, 'expired', 'Not started before the slot ended'); }
+        } else if (b.status === 'confirmed' && t > slotEnd(b) + 6 * HOUR) {
+          restoreDues(b); log(b, 'expired', 'Never started');
+        }
+      }
+      for (const [k, s] of Object.entries(store.sessions)) if (t > s.expiresAt) delete store.sessions[k];
+    }
+
+    // ---- router
+
+    const routes = [];
+    const route = (method, pattern, auth, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), auth, fn });
+
+    route('GET', '/api/health', false, () => ({ ok: true, mode: devMode ? 'demo' : 'live', time: now() }));
+    route('GET', '/api/catalog', false, () => ({ services: SERVICES, slots: SLOTS, units: UNITS, villages: VILLAGES, rules: RULES, today: todayIST(now()) }));
+    route('GET', '/api/villages/nearest', false, (c) => nearestVillage(Number(c.query.lat), Number(c.query.lng)));
+    route('POST', '/api/auth/otp', false, (c) => requestOtp(c.body));
+    route('POST', '/api/auth/verify', false, (c) => verifyOtp(c.body));
+    route('POST', '/api/auth/demo', false, (c) => demoLogin(c.body));
+    route('POST', '/api/auth/logout', true, (c) => logout(c.token));
+    route('GET', '/api/me', true, (c) => userView(c.user));
+    route('PATCH', '/api/me', true, (c) => updateMe(c.user, c.body));
+    route('POST', '/api/quote', true, (c) => quote(c.user, c.body));
+    route('POST', '/api/bookings', true, (c) => createBooking(c.user, c.body));
+    route('GET', '/api/bookings', true, (c) => myBookings(c.user));
+    route('GET', '/api/bookings/:id', true, (c) => viewBooking(c.user, c.params.id));
+    route('POST', '/api/bookings/:id/cancel', true, (c) => cancelBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/bookings/:id/reschedule', true, (c) => rescheduleBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/bookings/:id/accept', true, (c) => acceptBooking(c.user, c.params.id));
+    route('POST', '/api/bookings/:id/withdraw', true, (c) => withdrawBooking(c.user, c.params.id));
+    route('POST', '/api/bookings/:id/start', true, (c) => startBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/bookings/:id/complete', true, (c) => completeBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/bookings/:id/rate', true, (c) => rateBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/bookings/:id/dispute', true, (c) => disputeBooking(c.user, c.params.id, c.body));
+    route('POST', '/api/provider', true, (c) => registerProvider(c.user, c.body));
+    route('POST', '/api/provider/online', true, (c) => setOnline(c.user, c.body));
+    route('GET', '/api/provider/jobs', true, (c) => providerJobs(c.user));
+    route('GET', '/api/admin/overview', true, (c) => adminOverview(c.user));
+    route('POST', '/api/admin/providers/:id', true, (c) => adminVerify(c.user, c.params.id, c.body));
+    route('POST', '/api/admin/bookings/:id/resolve', true, (c) => adminResolve(c.user, c.params.id, c.body));
+
+    function handle(method, url, body, token) {
+      try {
+        const [path, qs] = String(url).split('?');
+        const query = {};
+        if (qs) for (const part of qs.split('&')) { const [k, v] = part.split('='); query[decodeURIComponent(k)] = decodeURIComponent(v || ''); }
+        let pathMatched = false;
+        for (const r of routes) {
+          const m = path.match(r.re);
+          if (!m) continue;
+          pathMatched = true;
+          if (r.method !== method) continue;
+          sweep();
+          const user = authUser(token);
+          if (r.auth && !user) throw new AppError(401, 'UNAUTHORIZED', 'Please log in again.');
+          const data = r.fn({ body: body && typeof body === 'object' ? body : {}, params: m.groups || {}, query, user, token });
+          return { status: 200, body: data };
+        }
+        if (pathMatched) throw new AppError(405, 'METHOD_NOT_ALLOWED', 'Method not allowed.');
+        throw notFound('Route');
+      } catch (e) {
+        if (e instanceof AppError) return { status: e.status, body: { error: { code: e.code, message: e.message } } };
+        if (opts.onError) opts.onError(e);
+        return { status: 500, body: { error: { code: 'INTERNAL', message: 'Something went wrong. Please try again.' } } };
+      }
+    }
+
+    return { store, handle, sweep, isDevMode: () => devMode };
+  }
+
+  // -------------------------------------------------------------- demo seed
+
+  // Seeds a believable pilot: providers across the cluster plus sample bookings,
+  // so the hosted demo opens in a working state. Synthetic people only.
+  function seedDemo(app, t) {
+    const call = (m, p, b, tok) => {
+      const r = app.handle(m, p, b, tok);
+      if (r.status !== 200) throw new Error(`seed ${m} ${p}: ${JSON.stringify(r.body)}`);
+      return r.body;
+    };
+    const login = (phone, name) => call('POST', '/api/auth/demo', { phone, name }).token;
+    const admin = login('9999999999', 'KhetSaathi Ops');
+    const provs = [
+      ['9811100001', 'Ramesh Yadav', 'tractor', ['plough', 'rotavator', 'sowing', 'trolley'], 'pipraich', 'Mahindra 575 DI, UP53 AT 4411'],
+      ['9811100002', 'Sunil Nishad', 'tractor', ['plough', 'harvester', 'trolley'], 'bhathat', 'Swaraj 744, UP53 BK 2290'],
+      ['9811100003', 'Harish Maurya', 'tractor', ['plough', 'sowing', 'rotavator'], 'sahjanwa', 'Sonalika DI 745, UP53 CF 7781'],
+      ['9811100011', 'Geeta Devi', 'labour', ['weeding', 'transplanting', 'harvesting', 'general'], 'jungle', ''],
+      ['9811100012', 'Rajkumar Paswan', 'labour', ['irrigation', 'spraying', 'general', 'weeding'], 'jungle', ''],
+      ['9811100013', 'Sita Nishad', 'labour', ['transplanting', 'weeding', 'harvesting'], 'pipraich', ''],
+      ['9811100014', 'Mohan Chauhan', 'labour', ['harvesting', 'irrigation', 'general', 'spraying'], 'bhathat', ''],
+      ['9811100015', 'Phool Kumari', 'labour', ['weeding', 'general', 'transplanting'], 'khorabar', ''],
+      ['9811100021', 'Anil Vishwakarma', 'mechanic', ['tractor_repair', 'pump_repair', 'equipment_repair'], 'gkp', ''],
+      ['9811100022', 'Salim Ansari', 'mechanic', ['pump_repair', 'equipment_repair'], 'chauri', ''],
+      ['9811100031', 'Ram Prasad Singh', 'farmer', ['field_manager', 'crop_advice'], 'jungle', ''],
+      ['9811100032', 'Kamla Devi', 'farmer', ['crop_advice', 'field_manager'], 'campierganj', ''],
+    ];
+    const tokens = {};
+    for (const [phone, name, type, skills, villageId, vehicle] of provs) {
+      tokens[phone] = login(phone, name);
+      const me = call('POST', '/api/provider', { type, skills, villageId, vehicle }, tokens[phone]);
+      call('POST', `/api/admin/providers/${me.id}`, { verified: true }, admin);
+    }
+    // One unverified applicant waiting in the admin queue.
+    const pending = login('9811100041', 'Deepak Gupta');
+    call('POST', '/api/provider', { type: 'tractor', skills: ['plough', 'trolley'], villageId: 'khorabar', vehicle: 'Eicher 380, UP53 DD 1001' }, pending);
+
+    const cust = login('9876543210', 'Vinod Tiwari');
+    const today = todayIST(t);
+    const d1 = addDays(today, 1), d2 = addDays(today, 2), d3 = addDays(today, 4);
+    const b1 = call('POST', '/api/bookings', { service: 'tractor', task: 'plough', date: d1, slot: 'morning', quantity: 3, villageId: 'jungle', landmark: 'Behind the primary school, near the tube well' }, cust);
+    call('POST', `/api/bookings/${b1.id}/accept`, {}, tokens['9811100001']);
+    const b2 = call('POST', '/api/bookings', { service: 'labour', task: 'transplanting', date: d2, slot: 'full', quantity: 4, villageId: 'jungle', notes: 'Paddy nursery is ready, 2 bigha' }, cust);
+    call('POST', `/api/bookings/${b2.id}/accept`, {}, tokens['9811100011']);
+    call('POST', `/api/bookings/${b2.id}/accept`, {}, tokens['9811100013']);
+    call('POST', '/api/bookings', { service: 'mechanic', task: 'pump_repair', date: d1, slot: 'afternoon', villageId: 'jungle', notes: 'Diesel pump not starting' }, cust);
+    call('POST', '/api/bookings', { service: 'farmer', task: 'crop_advice', date: d3, slot: 'morning', villageId: 'jungle', notes: 'Yellow leaves on wheat' }, cust);
+    return { adminPhone: '9999999999', customerPhone: '9876543210' };
+  }
+
+  return {
+    createApp, createEmptyStore, seedDemo, computePrice, maxQuantity, normPhone, haversineKm,
+    todayIST, addDays, istTime, SERVICES, SLOTS, UNITS, VILLAGES, RULES, AppError,
+  };
+});
+
+</script>
+<script>
+/* KhetSaathi web app. Plain JS, no build step.
+ * Talks to the server's /api when there is one; otherwise runs core.js inside the
+ * browser ("demo mode", saved in localStorage) so the app works as a static page. */
+(function () {
+  'use strict';
+  const K = window.KhetCore;
+  const view = document.getElementById('view');
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('ks.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('ks.' + k, JSON.stringify(v)); } catch (e) { /* storage blocked: stay in memory */ } },
+    del(k) { try { localStorage.removeItem('ks.' + k); } catch (e) { /* ignore */ } },
+  };
+  const navLang = (navigator.language || '').toLowerCase().startsWith('hi') ? 'hi' : 'en';
+  const S = { lang: store.get('lang', navLang), token: store.get('token', null), me: null, cat: null, mode: null, liveMode: false, offset: 0, draft: null, ui: {}, quoteSeq: 0 };
+
+  // ------------------------------------------------------------ words
+
+  const W = {
+    tagline: ['Farm help, booked from your phone', 'खेती की मदद, फ़ोन से बुक करें'],
+    loginLead: ['Tractor, farm workers, mechanic or an experienced farmer at your field. Pay in cash after the work is done.', 'ट्रैक्टर, मज़दूर, मिस्त्री या अनुभवी किसान — आपके खेत पर। काम के बाद नकद भुगतान।'],
+    mobile: ['Mobile number', 'मोबाइल नंबर'],
+    getOtp: ['Get OTP', 'OTP भेजें'],
+    otp: ['6-digit OTP', '6 अंकों का OTP'],
+    otpSent: ['OTP sent to', 'OTP भेजा गया'],
+    yourName: ['Your name', 'आपका नाम'],
+    verify: ['Log in', 'लॉग इन करें'],
+    changeNo: ['Change number', 'नंबर बदलें'],
+    demoOtp: ['Demo: SMS is not connected, so your OTP is', 'डेमो: SMS जुड़ा नहीं है, आपका OTP है'],
+    namaste: ['Namaste', 'नमस्ते'],
+    whatNeed: ['What do you need at your field?', 'खेत पर क्या चाहिए?'],
+    from: ['from', 'शुरू'],
+    myBookings: ['Your bookings', 'आपकी बुकिंग'],
+    noBookings: ['No bookings yet. Pick a service above.', 'अभी कोई बुकिंग नहीं। ऊपर से सेवा चुनें।'],
+    navBook: ['Book', 'बुक करें'], navBookings: ['Bookings', 'बुकिंग'], navEarn: ['Earn', 'कमाएं'], navAdmin: ['Admin', 'एडमिन'],
+    back: ['← Back', '← वापस'],
+    work: ['Type of work', 'काम का प्रकार'],
+    village: ['Village', 'गाँव'],
+    nearMe: ['Use my location', 'मेरी लोकेशन लें'],
+    landmark: ['How to find your field', 'खेत कैसे पहुँचें'],
+    landmarkPh: ['e.g. behind the school, near the tube well', 'जैसे: स्कूल के पीछे, ट्यूबवेल के पास'],
+    date: ['Date', 'तारीख'],
+    time: ['Time', 'समय'],
+    howMuch: ['How much work', 'कितना काम'],
+    notes: ['Anything else?', 'और कुछ?'],
+    notesPh: ['Crop, field size, what to bring…', 'फसल, खेत का साइज़, क्या लाना है…'],
+    priceTitle: ['Price', 'कीमत'],
+    work_: ['Work', 'काम'], travel: ['Travel', 'आने-जाने का'], fee: ['Service fee', 'सेवा शुल्क'], dues: ['Earlier cancellation fee', 'पिछला रद्द शुल्क'], total: ['Total', 'कुल'],
+    travelEst: ['estimated', 'अनुमानित'],
+    freeNearby: ['free nearby now', 'अभी पास में खाली'],
+    payCash: ['Pay in cash or UPI after the work. Price is locked when you book.', 'काम के बाद नकद या UPI से भुगतान। बुकिंग के समय कीमत तय।'],
+    visitNote: ['Visit fee only. Parts and repair labour are billed on site.', 'सिर्फ विज़िट फीस। पुर्ज़े और मरम्मत का खर्च मौके पर।'],
+    confirmBook: ['Confirm booking', 'बुकिंग पक्की करें'],
+    booked: ['Booked. Nearby providers have been alerted.', 'बुक हो गया। पास के लोगों को सूचना भेजी गई।'],
+    pinTitle: ['Start PIN', 'शुरू करने का PIN'],
+    pinHelp: ['Give this PIN only when the provider is at your field.', 'यह PIN तभी बताएं जब व्यक्ति खेत पर पहुँच जाए।'],
+    providers: ['Who is coming', 'कौन आ रहा है'],
+    waitingFor: ['Looking for', 'खोज रहे हैं'],
+    of: ['of', 'में से'],
+    waitingOne: ['Alerting nearby providers. You will see their name and phone here once someone accepts.', 'पास के लोगों को सूचना भेजी है। कोई काम लेगा तो उसका नाम और नंबर यहाँ दिखेगा।'],
+    timeline: ['Updates', 'अपडेट'],
+    cancel: ['Cancel booking', 'बुकिंग रद्द करें'],
+    cancelFree: ['Cancelling now is free.', 'अभी रद्द करना मुफ़्त है।'],
+    cancelFee: ['A provider is already on the way to plan your job. Cancelling now costs', 'व्यक्ति ने आपका काम पक्का कर लिया है। अभी रद्द करने पर शुल्क'],
+    cancelFeeTail: ['added to your next booking.', 'अगली बुकिंग में जुड़ेगा।'],
+    noShow: ['Provider has not arrived 2 hours after start time. You can cancel free.', 'शुरू होने के 2 घंटे बाद भी कोई नहीं आया। आप मुफ़्त में रद्द कर सकते हैं।'],
+    yesCancel: ['Yes, cancel', 'हाँ, रद्द करें'], keep: ['Keep booking', 'बुकिंग रखें'],
+    move: ['Change date (rain?)', 'तारीख बदलें (बारिश?)'], moveOnce: ['You can change the date once, free.', 'तारीख एक बार मुफ़्त बदल सकते हैं।'], moveBtn: ['Move booking', 'बुकिंग आगे करें'],
+    rate: ['Rate the work', 'काम को रेटिंग दें'], rateBtn: ['Submit rating', 'रेटिंग भेजें'], comment: ['Comment (optional)', 'टिप्पणी (वैकल्पिक)'],
+    complain: ['Report a problem', 'शिकायत करें'], complainPh: ['What went wrong?', 'क्या गड़बड़ हुई?'], complainBtn: ['Send complaint', 'शिकायत भेजें'],
+    customer: ['Customer', 'ग्राहक'], call: ['Call', 'कॉल करें'],
+    askPin: ['Ask the customer for the 4-digit PIN', 'ग्राहक से 4 अंकों का PIN लें'], startBtn: ['Start work', 'काम शुरू करें'],
+    actualQty: ['Actual work done', 'असल में कितना काम हुआ'], partsBill: ['Parts + repair labour (₹)', 'पुर्ज़े + मरम्मत (₹)'], completeBtn: ['Mark work complete', 'काम पूरा हुआ'],
+    collect: ['Collect from customer', 'ग्राहक से लें'], yourShare: ['Your earning', 'आपकी कमाई'],
+    withdraw: ['I cannot come', 'मैं नहीं आ पाऊँगा'], withdrawWarn: ['Withdrawing less than 12 hours before start gives you a strike. 3 strikes pause your account.', 'शुरू होने से 12 घंटे से कम पहले मना करने पर 1 स्ट्राइक। 3 स्ट्राइक पर खाता रुकेगा।'], yesWithdraw: ['Yes, withdraw', 'हाँ, मना करें'],
+    earnTitle: ['Earn with KhetSaathi', 'KhetSaathi से कमाएं'],
+    earnLead: ['Own a tractor, work in fields, repair machines or know farming well? Get jobs from nearby villages.', 'ट्रैक्टर है, खेत में काम करते हैं, मशीन ठीक करते हैं या खेती में माहिर हैं? पास के गाँवों से काम पाएं।'],
+    iOffer: ['What do you offer?', 'आप क्या देते हैं?'], iCanDo: ['Work you can do', 'आप कौन-सा काम कर सकते हैं'],
+    homeVillage: ['Your village', 'आपका गाँव'], radius: ['How far can you travel (km)', 'कितनी दूर जा सकते हैं (किमी)'],
+    vehicle: ['Tractor model and number', 'ट्रैक्टर मॉडल और नंबर'], join: ['Join as provider', 'जुड़ें'], save: ['Save changes', 'बदलाव सेव करें'],
+    pendingVerify: ['We are checking your documents. You will start getting jobs once verified (usually within a day).', 'हम आपके कागज़ जाँच रहे हैं। जाँच के बाद काम मिलने लगेगा (आमतौर पर एक दिन में)।'],
+    suspended: ['Your account is paused after 3 strikes. Call support to restart.', '3 स्ट्राइक के बाद खाता रुका है। फिर शुरू करने के लिए सपोर्ट को कॉल करें।'],
+    online: ['Available for new jobs', 'नए काम के लिए उपलब्ध'],
+    offers: ['New jobs near you', 'आपके पास नए काम'], noOffers: ['No new jobs right now. Keep "available" on; new jobs show up here.', 'अभी कोई नया काम नहीं। "उपलब्ध" चालू रखें, नए काम यहाँ दिखेंगे।'],
+    offline: ['You are not available. Switch on to see jobs.', 'आप उपलब्ध नहीं हैं। काम देखने के लिए चालू करें।'],
+    myJobs: ['Your jobs', 'आपके काम'], accept: ['Accept job', 'काम लें'], accepted: ['Job accepted. Customer details are now visible.', 'काम मिल गया। ग्राहक की जानकारी अब दिखेगी।'],
+    rating: ['Rating', 'रेटिंग'], jobsDone: ['Jobs done', 'पूरे काम'], earnings: ['Earned', 'कमाई'], strikes: ['Strikes', 'स्ट्राइक'],
+    editProfile: ['Edit profile', 'प्रोफ़ाइल बदलें'], away: ['km away', 'किमी दूर'],
+    adminTitle: ['Operations', 'संचालन'], verifyQ: ['Waiting for verification', 'जाँच बाकी'], verifyBtn: ['Verify', 'मंज़ूर करें'],
+    suspendedQ: ['Paused providers', 'रुके हुए प्रदाता'], restore: ['Restore', 'फिर चालू करें'],
+    disputes: ['Open complaints', 'खुली शिकायतें'], refund: ['Refund ₹', 'वापसी ₹'], resolve: ['Resolve', 'निपटाएं'],
+    recent: ['Latest bookings', 'हाल की बुकिंग'], nothing: ['Nothing here.', 'कुछ नहीं।'],
+    demoBar: ['Demo', 'डेमो'], tryAs: ['Try as', 'इस रूप में देखें'], jump: ['⏩ Jump to job time', '⏩ काम के समय पर जाएं'], reset: ['Reset demo', 'डेमो रीसेट'],
+    demoClock: ['Demo clock', 'डेमो घड़ी'],
+    netErr: ['No internet. Check your connection and try again.', 'इंटरनेट नहीं है। कनेक्शन देखें और फिर कोशिश करें।'],
+    loggedOut: ['Logged out', 'लॉग आउट हो गए'],
+  };
+  const t = (k) => (W[k] ? W[k][S.lang === 'hi' ? 1 : 0] : k);
+  const nm = (o) => (o ? (S.lang === 'hi' ? o.hi : o.en) : '');
+  const STATUS = {
+    requested: ['Finding provider', 'व्यक्ति खोज रहे हैं'], confirmed: ['Confirmed', 'पक्का'], in_progress: ['Work in progress', 'काम चालू'],
+    completed: ['Completed', 'पूरा'], cancelled: ['Cancelled', 'रद्द'], expired: ['Expired', 'समय निकल गया'], disputed: ['Complaint open', 'शिकायत दर्ज'],
+  };
+  const pill = (s) => `<span class="pill st-${esc(s)}">${esc(STATUS[s] ? STATUS[s][S.lang === 'hi' ? 1 : 0] : s)}</span>`;
+  const rupees = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+  const fmtDate = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString(S.lang === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const fmtTime = (ms) => new Date(ms).toLocaleString(S.lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  const qtyLabel = (task, q) => {
+    const u = K.UNITS[task.unit];
+    return task.unit === 'visit' || task.unit === 'day' ? nm(u) : `${q} ${nm(u)}`;
+  };
+
+  // ------------------------------------------------------------ backend
+
+  let local = null;
+  const now = () => Date.now() + S.offset;
+
+  async function initBackend() {
+    try {
+      const r = await fetch('api/health', { cache: 'no-store' });
+      const j = await r.json();
+      if (j && j.ok) { S.mode = 'server'; S.liveMode = j.mode === 'live'; return; }
+    } catch (e) { /* no server: static hosting */ }
+    S.mode = 'local';
+    S.offset = store.get('offset', 0);
+    const saved = store.get('store', null);
+    local = K.createApp({ store: saved || undefined, now });
+    if (!saved) { K.seedDemo(local, now()); saveLocal(); }
+  }
+  function saveLocal() { if (local) store.set('store', local.store); }
+
+  async function api(method, path, body) {
+    let status, data;
+    if (S.mode === 'server') {
+      let res;
+      try {
+        res = await fetch(path.replace(/^\//, ''), {
+          method, cache: 'no-store',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, S.token ? { Authorization: 'Bearer ' + S.token } : {}),
+          body: body ? JSON.stringify(body) : undefined,
+        });
+      } catch (e) { throw Object.assign(new Error(t('netErr')), { code: 'NETWORK' }); }
+      status = res.status;
+      data = await res.json().catch(() => ({ error: { message: t('netErr') } }));
+    } else {
+      const out = local.handle(method, path, body ? JSON.parse(JSON.stringify(body)) : {}, S.token);
+      status = out.status; data = JSON.parse(JSON.stringify(out.body));
+      saveLocal();
+    }
+    if (status === 401 && S.token) { setToken(null); S.me = null; go('login'); }
+    if (status !== 200) throw Object.assign(new Error((data.error && data.error.message) || 'Error'), { code: data.error && data.error.code });
+    return data;
+  }
+
+  function setToken(tok) { S.token = tok; if (tok) store.set('token', tok); else store.del('token'); }
+
+  // ------------------------------------------------------------ ui helpers
+
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
+  }
+  const errBox = (e) => `<div class="note err" role="alert">${esc(e.message || e)}</div>`;
+  function go(hash) { if (location.hash === '#' + hash) route(); else location.hash = hash; }
+  function busy(btn, on) { if (btn) btn.disabled = on; }
+
+  function renderChrome(active) {
+    document.documentElement.lang = S.lang;
+    document.getElementById('lang-btn').textContent = S.lang === 'hi' ? 'English' : 'हिंदी';
+    document.getElementById('out-btn').hidden = !S.me;
+    document.getElementById('out-btn').title = S.lang === 'hi' ? 'लॉग आउट' : 'Log out';
+    const nav = document.getElementById('nav');
+    nav.hidden = !S.me;
+    if (!S.me) return;
+    const items = [['home', '🌾', 'navBook'], ['bookings', '📋', 'navBookings'], ['earn', '💰', 'navEarn']];
+    if (S.me.isAdmin) items.push(['admin', '📊', 'navAdmin']);
+    document.getElementById('nav-in').innerHTML = items.map(([h, ic, k]) =>
+      `<a href="#${h}" ${active === h ? 'aria-current="page"' : ''}><span class="ic" aria-hidden="true">${ic}</span>${esc(t(k))}</a>`).join('');
+  }
+
+  const DEMO_USERS = [
+    ['9876543210', 'Vinod · customer', 'विनोद · ग्राहक'],
+    ['9811100001', 'Ramesh · tractor', 'रमेश · ट्रैक्टर'],
+    ['9811100011', 'Geeta · farm worker', 'गीता · मज़दूर'],
+    ['9811100013', 'Sita · farm worker', 'सीता · मज़दूर'],
+    ['9811100021', 'Anil · mechanic', 'अनिल · मिस्त्री'],
+    ['9811100031', 'Ram Prasad · farmer', 'राम प्रसाद · किसान'],
+    ['9999999999', 'Ops · admin', 'ऑप्स · एडमिन'],
+  ];
+  function demoBar() {
+    if (S.mode === 'server' && S.liveMode) return '';
+    const cur = S.me ? S.me.phone : '';
+    const opts = DEMO_USERS.map(([p, en, hi]) => `<option value="${p}" ${p === cur ? 'selected' : ''}>${esc(S.lang === 'hi' ? hi : en)}</option>`).join('');
+    const localTools = S.mode === 'local'
+      ? `<div class="demo-row"><button class="btn ghost sm" data-act="jump" type="button">${t('jump')}</button><button class="btn ghost sm" data-act="reset" type="button">${t('reset')}</button></div>
+         <span class="small muted">${t('demoClock')}: <span class="num">${esc(fmtTime(now()))}</span></span>` : '';
+    return `<div class="demo"><div class="demo-row"><b>${t('demoBar')}</b><label class="small" for="demo-user">${t('tryAs')}</label>
+      <select id="demo-user" data-act="demo-user">${cur && !DEMO_USERS.some((d) => d[0] === cur) ? `<option selected>${esc(S.me.name)}</option>` : ''}${opts}</select></div>${localTools}</div>`;
+  }
+
+  // ------------------------------------------------------------ screens
+
+  function screenLogin() {
+    const st = S.ui.login || {};
+    view.innerHTML = `
+      <div class="hero-login">
+        <div class="icons-strip" aria-hidden="true"><span>🚜</span><span>👷</span><span>🔧</span><span>👨‍🌾</span></div>
+        <h1>${t('tagline')}</h1>
+        <p class="muted">${t('loginLead')}</p>
+      </div>
+      ${st.phone ? `
+      <form data-form="verify" class="form" novalidate>
+        <p>${t('otpSent')} <b class="num">+91 ${esc(st.phone)}</b></p>
+        ${st.devOtp ? `<div class="note info">${t('demoOtp')} <b class="num">${esc(st.devOtp)}</b></div>` : ''}
+        <div class="field"><label for="otp">${t('otp')}</label>
+          <input id="otp" name="code" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+        ${st.isNewUser ? `<div class="field"><label for="uname">${t('yourName')}</label><input id="uname" name="name" type="text" autocomplete="name" maxlength="40"></div>` : ''}
+        <div id="login-err"></div>
+        <button class="btn block" type="submit">${t('verify')}</button>
+        <button class="btn ghost block" type="button" data-act="change-no">${t('changeNo')}</button>
+      </form>` : `
+      <form data-form="otp" class="form" novalidate>
+        <div class="field"><label for="phone">${t('mobile')}</label>
+          <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="98765 43210" maxlength="14" required></div>
+        <div id="login-err"></div>
+        <button class="btn block" type="submit">${t('getOtp')}</button>
+      </form>`}
+      ${demoBar()}`;
+    renderChrome('');
+  }
+
+  async function screenHome() {
+    const [bookings] = await Promise.all([api('GET', '/api/bookings')]);
+    const services = Object.entries(S.cat.services).map(([id, s]) => {
+      const min = Math.min(...Object.values(s.tasks).map((x) => x.rate * (K.UNITS[x.unit].slotPriced ? K.SLOTS.morning.factor : 1)));
+      return `<a class="svc" href="#book-${id}"><span class="emo" aria-hidden="true">${s.icon}</span><h3>${esc(nm(s))}</h3><p>${esc(nm(s.tagline))}</p><span class="from">${t('from')} ${rupees(min)}</span></a>`;
+    }).join('');
+    const active = bookings.filter((b) => ['requested', 'confirmed', 'in_progress', 'disputed'].includes(b.status));
+    view.innerHTML = `
+      <div class="hello"><p class="muted">${t('namaste')}, ${esc(S.me.name)}</p><h1>${t('whatNeed')}</h1></div>
+      <div class="services">${services}</div>
+      ${S.me.dues ? `<div class="note warn">${t('dues')}: <b>${rupees(S.me.dues)}</b></div>` : ''}
+      <div class="section"><div class="section-h"><h2>${t('myBookings')}</h2>${bookings.length > active.length ? `<a href="#bookings" class="small">${bookings.length}</a>` : ''}</div>
+        <div class="list">${active.length ? active.map(bookingCard).join('') : `<div class="empty">${t('noBookings')}</div>`}</div></div>
+      ${demoBar()}`;
+    renderChrome('home');
+  }
+
+  async function screenBookings() {
+    const bookings = await api('GET', '/api/bookings');
+    view.innerHTML = `<h1>${t('myBookings')}</h1>
+      <div class="list">${bookings.length ? bookings.map(bookingCard).join('') : `<div class="empty">${t('noBookings')}</div>`}</div>${demoBar()}`;
+    renderChrome('bookings');
+  }
+
+  function bookingCard(b) {
+    const s = S.cat.services[b.service], task = s.tasks[b.task];
+    const forProvider = b.offer || (b.pin === undefined && !S.me.isAdmin);
+    const money = `<span class="price">${rupees(forProvider ? b.payoutShare : b.price.total)}</span>`;
+    const crew = b.needed > 1 ? ` · ${b.filled}/${b.needed}` : '';
+    return `<a class="card" href="#b-${esc(b.id)}">
+      <div class="row"><span class="bk-ic" aria-hidden="true">${s.icon}</span>
+        <div class="bk-main"><h3>${esc(nm(task))}</h3><p class="small muted">${esc(fmtDate(b.date))} · ${esc(nm(K.SLOTS[b.slot]))}</p></div>${money}</div>
+      <div class="row between wrap"><span class="small muted">📍 ${esc(nm(b.village))}${b.distanceKm != null ? ` · ${b.distanceKm} ${t('away')}` : ''} · ${esc(qtyLabel(task, b.quantity))}${crew}</span>${b.offer ? '' : pill(b.status)}</div></a>`;
+  }
+
+  // ---- booking form
+
+  function screenBook(serviceId) {
+    const s = S.cat.services[serviceId];
+    if (!s) return go('home');
+    if (!S.draft || S.draft.service !== serviceId) {
+      const tomorrow = K.addDays(S.cat.today, 1);
+      S.draft = { service: serviceId, task: Object.keys(s.tasks)[0], villageId: store.get('village', 'jungle'), landmark: store.get('landmark', ''), date: tomorrow, slot: 'morning', quantity: null, notes: '' };
+    }
+    const d = S.draft, task = s.tasks[d.task], unit = K.UNITS[task.unit];
+    const max = K.maxQuantity(task, d.slot);
+    if (d.quantity == null || d.quantity < unit.min) d.quantity = task.unit === 'acre' ? 2 : task.unit === 'worker_day' ? 3 : unit.min;
+    if (d.quantity > max) d.quantity = max;
+    const maxDate = K.addDays(S.cat.today, S.cat.rules.bookingHorizonDays);
+    view.innerHTML = `
+      <a class="back" href="#home">${t('back')}</a>
+      <div class="row"><span class="bk-ic" aria-hidden="true">${s.icon}</span><div><h1>${esc(nm(s))}</h1><p class="small muted">${esc(nm(s.tagline))}</p></div></div>
+      <form data-form="book" class="form" novalidate>
+        <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="lbl">${t('work')}</legend>
+          <div class="choices">${Object.entries(s.tasks).map(([id, x]) => `<label class="choice"><input type="radio" name="task" value="${id}" data-draft ${id === d.task ? 'checked' : ''}><span>${esc(nm(x))}<small>${rupees(x.rate)} / ${esc(nm(K.UNITS[x.unit]).replace(/s$/, ''))}</small></span></label>`).join('')}</div>
+        </fieldset>
+        <div class="field"><label for="villageId">${t('village')}</label>
+          <select id="villageId" name="villageId" data-draft>${S.cat.villages.map((v) => `<option value="${v.id}" ${v.id === d.villageId ? 'selected' : ''}>${esc(nm(v))}</option>`).join('')}</select>
+          <button class="btn ghost sm" type="button" data-act="locate" style="align-self:flex-start">📍 ${t('nearMe')}</button></div>
+        <div class="field"><label for="landmark">${t('landmark')}</label><input id="landmark" name="landmark" type="text" maxlength="120" value="${esc(d.landmark)}" placeholder="${esc(t('landmarkPh'))}" data-draft></div>
+        <div class="field"><label for="date">${t('date')}</label><input id="date" name="date" type="date" min="${S.cat.today}" max="${maxDate}" value="${esc(d.date)}" data-draft></div>
+        <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="lbl">${t('time')}</legend>
+          <div class="choices">${Object.entries(K.SLOTS).map(([id, x]) => `<label class="choice"><input type="radio" name="slot" value="${id}" data-draft ${id === d.slot ? 'checked' : ''}><span>${esc(nm(x))}</span></label>`).join('')}</div></fieldset>
+        ${unit.max > 1 ? `<div class="field"><span class="lbl" id="qty-l">${t('howMuch')}</span>
+          <div class="stepper" role="group" aria-labelledby="qty-l"><button type="button" data-act="qty" data-d="-1" aria-label="less" ${d.quantity <= unit.min ? 'disabled' : ''}>−</button>
+          <output id="qty-out">${esc(qtyLabel(task, d.quantity))}</output>
+          <button type="button" data-act="qty" data-d="1" aria-label="more" ${d.quantity >= max ? 'disabled' : ''}>+</button></div>
+          <span class="hint">${unit.perSlotHour ? (S.lang === 'hi' ? `इस समय में अधिकतम ${max} ${nm(unit)}` : `Up to ${max} ${nm(unit)} fit in this time`) : ''}</span></div>` : ''}
+        <div class="field"><label for="notes">${t('notes')}</label><textarea id="notes" name="notes" maxlength="300" placeholder="${esc(t('notesPh'))}" data-draft>${esc(d.notes)}</textarea></div>
+        <div id="quote" class="quote" aria-live="polite"><span class="muted small">…</span></div>
+        <div id="book-err"></div>
+        <button class="btn block" type="submit" id="book-btn">${t('confirmBook')}</button>
+      </form>`;
+    renderChrome('home');
+    refreshQuote();
+  }
+
+  let quoteTimer;
+  function refreshQuote() {
+    clearTimeout(quoteTimer);
+    quoteTimer = setTimeout(async () => {
+      const el = document.getElementById('quote'); if (!el) return;
+      const seq = ++S.quoteSeq;
+      try {
+        const q = await api('POST', '/api/quote', S.draft);
+        if (seq !== S.quoteSeq) return; // a newer quote is on its way
+        const p = q.price, s = S.cat.services[S.draft.service];
+        el.innerHTML = `
+          <div class="qline"><span>${t('work_')} · ${esc(qtyLabel(s.tasks[S.draft.task], p.quantity))}${p.slotFactor < 1 ? ' · ½' : ''}</span><span>${rupees(p.base)}</span></div>
+          ${s.travel ? `<div class="qline"><span>${t('travel')} · ${p.travelKm} km${q.travelEstimated ? ` (${t('travelEst')})` : ''}</span><span>${rupees(p.travel)}</span></div>` : ''}
+          <div class="qline"><span>${t('fee')}</span><span>${rupees(p.platformFee)}</span></div>
+          ${p.dues ? `<div class="qline"><span>${t('dues')}</span><span>${rupees(p.dues)}</span></div>` : ''}
+          <div class="qline total"><span>${t('total')}</span><span>${rupees(p.total)}</span></div>
+          ${q.availableProviders ? `<span class="avail">● ${q.availableProviders} ${t('freeNearby')}</span>` : ''}
+          ${q.warning ? `<div class="note warn">${esc(q.warning)}</div>` : ''}
+          <span class="small muted">${q.billable ? t('visitNote') + ' ' : ''}${t('payCash')}</span>`;
+        document.getElementById('book-btn').disabled = false;
+      } catch (e) {
+        if (seq !== S.quoteSeq) return;
+        el.innerHTML = errBox(e);
+        const btn = document.getElementById('book-btn'); if (btn) btn.disabled = true;
+      }
+    }, 150);
+  }
+
+  // ---- booking detail
+
+  async function screenBooking(id) {
+    const b = await api('GET', '/api/bookings/' + encodeURIComponent(id));
+    const s = S.cat.services[b.service], task = s.tasks[b.task];
+    const isCustomer = b.pin !== undefined; // only the customer is ever sent the PIN
+    const isProvider = !!(b.providers && b.providers.some((p) => p.id === S.me.id));
+    const ui = S.ui[id] || (S.ui[id] = {});
+    const back = b.offer || isProvider ? '#earn' : S.me.isAdmin && !isCustomer ? '#admin' : '#bookings';
+    let html = `<a class="back" href="${back}">${t('back')}</a>
+      <div class="row"><span class="bk-ic" aria-hidden="true">${s.icon}</span><div class="bk-main"><h1>${esc(nm(task))}</h1>
+        <p class="muted small">${esc(b.id)} · ${esc(fmtDate(b.date))} · ${esc(nm(K.SLOTS[b.slot]))}</p></div></div>
+      <div class="row wrap">${b.offer ? '' : pill(b.status)}${b.needed > 1 ? `<span class="small muted">👷 ${b.filled}/${b.needed}</span>` : ''}</div>`;
+
+    if (b.offer) {
+      html += `<div class="card"><dl class="kv">
+        <dt>${t('village')}</dt><dd>📍 ${esc(nm(b.village))} · ${b.distanceKm} ${t('away')}</dd>
+        ${b.landmark ? `<dt>${t('landmark')}</dt><dd>${esc(b.landmark)}</dd>` : ''}
+        <dt>${t('howMuch')}</dt><dd>${esc(qtyLabel(task, b.quantity))}</dd>
+        ${b.notes ? `<dt>${t('notes')}</dt><dd>${esc(b.notes)}</dd>` : ''}
+        <dt>${t('yourShare')}</dt><dd class="price">${rupees(b.payoutShare)}</dd></dl></div>
+        <div id="act-err"></div><button class="btn block" data-act="accept" data-id="${esc(b.id)}" type="button">${t('accept')}</button>`;
+      view.innerHTML = html + demoBar();
+      return renderChrome('earn');
+    }
+
+    if (isCustomer && ['requested', 'confirmed'].includes(b.status)) {
+      html += `<div class="pin"><div><span class="small">${t('pinTitle')}</span><p>${t('pinHelp')}</p></div><b class="num">${esc(b.pin)}</b></div>`;
+    }
+    if (b.noShow && isCustomer) html += `<div class="note warn">${t('noShow')}</div>`;
+
+    // people
+    if (b.providers) {
+      const people = b.providers.map((p) => `<div class="row between wrap"><div><b>${esc(p.name)}</b> ${p.rating ? `<span class="small">★ ${p.rating}</span>` : ''}
+        <p class="small muted">${p.vehicle ? esc(p.vehicle) + ' · ' : ''}${p.jobsDone} ${t('jobsDone').toLowerCase()} · ${p.distanceKm} ${t('away')}</p></div>
+        <span><span class="phone">${esc(p.phone)}</span> <a class="btn ghost sm" href="tel:+91${esc(p.phone)}">${t('call')}</a></span></div>`).join('');
+      const waiting = b.status === 'requested' && b.filled < b.needed ? `<p class="small muted">${b.needed > 1 ? `${t('waitingFor')} ${b.needed - b.filled} ${t('of')} ${b.needed}…` : t('waitingOne')}</p>` : '';
+      if (people || waiting) html += `<div class="card"><h3>${t('providers')}</h3>${people}${waiting}</div>`;
+    }
+    if (b.customer) {
+      html += `<div class="card"><h3>${t('customer')}</h3><div class="row between wrap"><b>${esc(b.customer.name)}</b>
+        <span><span class="phone">${esc(b.customer.phone)}</span> <a class="btn ghost sm" href="tel:+91${esc(b.customer.phone)}">${t('call')}</a></span></div>
+        <p class="small">📍 ${esc(nm(b.village))}${b.landmark ? ' · ' + esc(b.landmark) : ''}</p>${b.notes ? `<p class="small muted">${esc(b.notes)}</p>` : ''}</div>`;
+    } else if (b.landmark || b.notes) {
+      html += `<div class="card"><p class="small">📍 ${esc(nm(b.village))}${b.landmark ? ' · ' + esc(b.landmark) : ''}</p>${b.notes ? `<p class="small muted">${esc(b.notes)}</p>` : ''}</div>`;
+    }
+
+    // price
+    const p = b.price;
+    html += `<div class="quote"><div class="qline"><span>${t('work_')} · ${esc(qtyLabel(task, p.quantity))}</span><span>${rupees(p.base)}</span></div>
+      ${p.extra ? `<div class="qline"><span>${t('partsBill')}</span><span>${rupees(p.extra)}</span></div>` : ''}
+      ${s.travel ? `<div class="qline"><span>${t('travel')} · ${p.travelKm} km</span><span>${rupees(p.travel)}</span></div>` : ''}
+      <div class="qline"><span>${t('fee')}</span><span>${rupees(p.platformFee)}</span></div>
+      ${p.dues ? `<div class="qline"><span>${t('dues')}</span><span>${rupees(p.dues)}</span></div>` : ''}
+      <div class="qline total"><span>${isProvider && b.status === 'completed' ? t('collect') : t('total')}</span><span>${rupees(p.total)}</span></div>
+      ${isProvider ? `<div class="qline"><span>${t('yourShare')}</span><span>${rupees(b.payoutShare)}</span></div>` : ''}
+      ${b.dispute && b.dispute.resolution ? `<div class="note ok">${t('refund')}${esc(b.dispute.resolution.refund)}</div>` : ''}</div>`;
+
+    html += '<div id="act-err"></div>';
+
+    // actions: provider
+    if (isProvider) {
+      if (b.status === 'confirmed' || (b.status === 'requested' && b.needed > 1 && b.filled > 0)) {
+        html += `<form data-form="start" data-id="${esc(b.id)}" class="card form" novalidate><h3>${t('startBtn')}</h3>
+          <div class="field"><label for="pin">${t('askPin')}</label><input id="pin" name="pin" class="otp-input" type="text" inputmode="numeric" maxlength="4" required></div>
+          <button class="btn block" type="submit">${t('startBtn')}</button></form>`;
+      }
+      if (b.status === 'in_progress') {
+        const unit = K.UNITS[task.unit];
+        html += `<form data-form="complete" data-id="${esc(b.id)}" class="card form" novalidate><h3>${t('completeBtn')}</h3>
+          ${unit.adjustable ? `<div class="field"><label for="aqty">${t('actualQty')} (${esc(nm(unit))})</label><input id="aqty" name="quantity" type="number" inputmode="decimal" step="${unit.step}" min="${unit.step}" max="${b.quantity * 2}" value="${b.quantity}"></div>` : ''}
+          ${task.billable ? `<div class="field"><label for="extra">${t('partsBill')}</label><input id="extra" name="extra" type="number" inputmode="numeric" min="0" max="50000" step="1" value="0"></div>` : ''}
+          <button class="btn block" type="submit">${t('completeBtn')}</button></form>`;
+      }
+      if (['requested', 'confirmed'].includes(b.status)) {
+        html += ui.confirm === 'withdraw'
+          ? `<div class="card"><p>${t('withdrawWarn')}</p><div class="btn-row"><button class="btn danger" data-act="withdraw" data-id="${esc(b.id)}" type="button">${t('yesWithdraw')}</button><button class="btn ghost" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="" type="button">${t('keep')}</button></div></div>`
+          : `<button class="btn ghost block" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="withdraw" type="button">${t('withdraw')}</button>`;
+      }
+    }
+
+    // actions: customer
+    if (isCustomer) {
+      if (['requested', 'confirmed'].includes(b.status)) {
+        if (ui.confirm === 'cancel') {
+          const msg = b.noShow ? t('noShow') : b.lateCancelFee ? `${t('cancelFee')} <b>${rupees(b.lateCancelFee)}</b>, ${t('cancelFeeTail')}` : t('cancelFree');
+          html += `<div class="card"><p>${msg}</p><div class="btn-row"><button class="btn danger" data-act="cancel" data-id="${esc(b.id)}" type="button">${t('yesCancel')}</button><button class="btn ghost" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="" type="button">${t('keep')}</button></div></div>`;
+        } else if (ui.confirm === 'move') {
+          html += `<form data-form="move" data-id="${esc(b.id)}" class="card form" novalidate><h3>${t('move')}</h3><p class="small muted">${t('moveOnce')}</p>
+            <div class="field"><label for="mdate">${t('date')}</label><input id="mdate" name="date" type="date" min="${S.cat.today}" max="${K.addDays(S.cat.today, 30)}" value="${esc(K.addDays(b.date, 1))}"></div>
+            <div class="field"><label for="mslot">${t('time')}</label><select id="mslot" name="slot">${Object.entries(K.SLOTS).map(([k, x]) => `<option value="${k}" ${k === b.slot ? 'selected' : ''}>${esc(nm(x))}</option>`).join('')}</select></div>
+            <div class="btn-row"><button class="btn" type="submit">${t('moveBtn')}</button><button class="btn ghost" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="" type="button">${t('keep')}</button></div></form>`;
+        } else {
+          html += `<div class="btn-row">${b.rescheduleCount < 1 && !b.noShow ? `<button class="btn ghost" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="move" type="button">${t('move')}</button>` : ''}
+            <button class="btn danger" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="cancel" type="button">${t('cancel')}</button></div>`;
+        }
+      }
+      if ((b.status === 'completed' || b.status === 'disputed') && !b.rating) {
+        const st = ui.stars || 0;
+        html += `<form data-form="rate" data-id="${esc(b.id)}" class="card form" novalidate><h3>${t('rate')}</h3>
+          <div class="stars" role="radiogroup">${[1, 2, 3, 4, 5].map((n) => `<label class="${n <= st ? 'on' : ''}" aria-label="${n}"><input type="radio" name="stars" value="${n}" data-act="star" data-id="${esc(b.id)}" ${n === st ? 'checked' : ''}>★</label>`).join('')}</div>
+          <div class="field"><label for="rc">${t('comment')}</label><input id="rc" name="comment" type="text" maxlength="300"></div>
+          <button class="btn block" type="submit" ${st ? '' : 'disabled'}>${t('rateBtn')}</button></form>`;
+      }
+      if (b.rating) html += `<p class="muted">★ ${b.rating.stars}/5 ${b.rating.comment ? '· ' + esc(b.rating.comment) : ''}</p>`;
+      if (b.status === 'completed' && !b.dispute && now() - b.completedAt < S.cat.rules.disputeWindowHours * 3600e3) {
+        html += ui.confirm === 'complain'
+          ? `<form data-form="dispute" data-id="${esc(b.id)}" class="card form" novalidate><h3>${t('complain')}</h3><div class="field"><label for="dr">${t('complainPh')}</label><textarea id="dr" name="reason" maxlength="500" required></textarea></div><button class="btn block" type="submit">${t('complainBtn')}</button></form>`
+          : `<button class="btn ghost block" data-act="ui" data-id="${esc(b.id)}" data-k="confirm" data-v="complain" type="button">${t('complain')}</button>`;
+      }
+    }
+
+    html += `<div class="section"><h3>${t('timeline')}</h3><ol class="timeline">${b.history.slice().reverse().map((h) => `<li>${esc(h.note || h.status)}<time>${esc(fmtTime(h.at))}</time></li>`).join('')}</ol></div>`;
+    view.innerHTML = html + demoBar();
+    renderChrome(isProvider ? 'earn' : S.me.isAdmin && !isCustomer ? 'admin' : 'bookings');
+  }
+
+  // ---- provider
+
+  async function screenEarn() {
+    const prov = S.me.provider;
+    if (!prov || S.ui.editProfile) return screenJoin(prov);
+    const data = await api('GET', '/api/provider/jobs');
+    const p = data.provider, s = S.cat.services[p.type];
+    const status = p.suspended ? `<div class="note err">${t('suspended')}</div>` : !p.verified ? `<div class="note warn">${t('pendingVerify')}</div>` : '';
+    const active = data.jobs.filter((j) => ['requested', 'confirmed', 'in_progress'].includes(j.status));
+    const past = data.jobs.filter((j) => !['requested', 'confirmed', 'in_progress'].includes(j.status));
+    view.innerHTML = `
+      <div class="row"><span class="bk-ic" aria-hidden="true">${s.icon}</span><div class="bk-main"><h1>${esc(S.me.name)}</h1><p class="small muted">${esc(nm(s))} · 📍 ${esc(nm(p.village))} · ${p.radiusKm} km</p></div>
+        <button class="btn ghost sm" data-act="edit-profile" type="button">${t('editProfile')}</button></div>
+      ${status}
+      <div class="tiles"><div class="tile"><div class="k">${t('earnings')}</div><div class="v">${rupees(data.earnings)}</div></div>
+        <div class="tile"><div class="k">${t('jobsDone')}</div><div class="v">${p.jobsDone}</div></div>
+        <div class="tile"><div class="k">${t('rating')}</div><div class="v">${p.rating ? '★ ' + p.rating : '–'}</div></div>
+        <div class="tile"><div class="k">${t('strikes')}</div><div class="v">${p.strikes}/3</div></div></div>
+      <label class="switch card" for="online"><input id="online" type="checkbox" data-act="online" ${p.online ? 'checked' : ''}><span><b>${t('online')}</b></span></label>
+      ${active.length ? `<div class="section"><h2>${t('myJobs')}</h2><div class="list">${active.map(bookingCard).join('')}</div></div>` : ''}
+      <div class="section"><h2>${t('offers')}</h2><div class="list">${!p.online ? `<div class="empty">${t('offline')}</div>` : data.offers.length ? data.offers.map((o) => `${bookingCard(o)}`).join('') : `<div class="empty">${t('noOffers')}</div>`}</div></div>
+      ${past.length ? `<div class="section"><h3 class="muted">${S.lang === 'hi' ? 'पुराने काम' : 'Past jobs'}</h3><div class="list">${past.slice(0, 10).map(bookingCard).join('')}</div></div>` : ''}
+      ${demoBar()}`;
+    renderChrome('earn');
+  }
+
+  function screenJoin(prov) {
+    const j = S.ui.join || (S.ui.join = prov ? { type: prov.type, skills: prov.skills.slice(), villageId: prov.villageId, radiusKm: prov.radiusKm, vehicle: prov.vehicle } : { type: 'labour', skills: [], villageId: store.get('village', 'jungle'), radiusKm: null, vehicle: '' });
+    const s = S.cat.services[j.type];
+    view.innerHTML = `
+      ${prov ? `<a class="back" href="#earn" data-act="cancel-edit">${t('back')}</a>` : ''}
+      <div><h1>${t('earnTitle')}</h1><p class="muted">${t('earnLead')}</p></div>
+      <form data-form="join" class="form" novalidate>
+        <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="lbl">${t('iOffer')}</legend>
+          <div class="services">${Object.entries(S.cat.services).map(([id, x]) => `<label class="choice"><input type="radio" name="type" value="${id}" data-join ${id === j.type ? 'checked' : ''} ${prov && id !== prov.type ? 'disabled' : ''}><span style="height:100%"><span style="font-size:1.6rem">${x.icon}</span><br>${esc(nm(x))}</span></label>`).join('')}</div></fieldset>
+        <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="lbl">${t('iCanDo')}</legend>
+          <div class="choices">${Object.entries(s.tasks).map(([id, x]) => `<label class="choice"><input type="checkbox" name="skills" value="${id}" data-join ${j.skills.includes(id) ? 'checked' : ''}><span>${esc(nm(x))}</span></label>`).join('')}</div></fieldset>
+        <div class="field"><label for="jv">${t('homeVillage')}</label><select id="jv" name="villageId" data-join>${S.cat.villages.map((v) => `<option value="${v.id}" ${v.id === j.villageId ? 'selected' : ''}>${esc(nm(v))}</option>`).join('')}</select></div>
+        <div class="field"><label for="jr">${t('radius')}</label><input id="jr" name="radiusKm" type="number" inputmode="numeric" min="1" max="${s.radiusKm}" value="${esc(j.radiusKm || s.radiusKm)}" data-join><span class="hint">1–${s.radiusKm} km</span></div>
+        ${j.type === 'tractor' ? `<div class="field"><label for="jveh">${t('vehicle')}</label><input id="jveh" name="vehicle" type="text" maxlength="60" placeholder="Mahindra 575 DI, UP53 AB 1234" value="${esc(j.vehicle)}" data-join></div>` : ''}
+        <div id="join-err"></div>
+        <button class="btn block" type="submit">${prov ? t('save') : t('join')}</button>
+      </form>${demoBar()}`;
+    renderChrome('earn');
+  }
+
+  // ---- admin
+
+  async function screenAdmin() {
+    if (!S.me.isAdmin) return go('home');
+    const o = await api('GET', '/api/admin/overview');
+    const tl = o.totals;
+    const provRow = (p, act, label) => `<div class="card"><div class="row between wrap"><div><b>${esc(p.name)}</b> <span class="phone small">${esc(p.phone)}</span>
+      <p class="small muted">${esc(nm(S.cat.services[p.type]))} · ${esc(nm(p.village))}${p.vehicle ? ' · ' + esc(p.vehicle) : ''} · ${p.skills.length} skills</p></div>
+      <button class="btn sm" data-act="${act}" data-id="${esc(p.id)}" type="button">${label}</button></div></div>`;
+    view.innerHTML = `
+      <h1>${t('adminTitle')}</h1>
+      <div class="tiles">
+        <div class="tile"><div class="k">GMV</div><div class="v">${rupees(tl.gmv)}</div></div>
+        <div class="tile"><div class="k">${S.lang === 'hi' ? 'फ़ीस आय' : 'Fee revenue'}</div><div class="v">${rupees(tl.platformRevenue)}</div></div>
+        <div class="tile"><div class="k">${S.lang === 'hi' ? 'बुकिंग' : 'Bookings'}</div><div class="v">${tl.bookings}</div></div>
+        <div class="tile"><div class="k">${S.lang === 'hi' ? 'भरने की दर' : 'Fill rate'}</div><div class="v">${tl.fillRate == null ? '–' : tl.fillRate + '%'}</div></div>
+        <div class="tile"><div class="k">${S.lang === 'hi' ? 'प्रदाता' : 'Providers'}</div><div class="v">${tl.providers}</div></div>
+        <div class="tile"><div class="k">${S.lang === 'hi' ? 'उपयोगकर्ता' : 'Users'}</div><div class="v">${tl.users}</div></div></div>
+      <div id="act-err"></div>
+      <div class="section"><h2>${t('verifyQ')} · ${o.pendingProviders.length}</h2><div class="list">${o.pendingProviders.map((p) => provRow(p, 'verify', t('verifyBtn'))).join('') || `<div class="empty">${t('nothing')}</div>`}</div></div>
+      ${o.suspendedProviders.length ? `<div class="section"><h2>${t('suspendedQ')}</h2><div class="list">${o.suspendedProviders.map((p) => provRow(p, 'restore', t('restore'))).join('')}</div></div>` : ''}
+      <div class="section"><h2>${t('disputes')} · ${o.disputes.length}</h2><div class="list">${o.disputes.map((b) => `
+        <form class="card form" data-form="resolve" data-id="${esc(b.id)}" novalidate><div class="row between"><a href="#b-${esc(b.id)}"><b>${esc(b.id)}</b></a><span class="price">${rupees(b.price.total)}</span></div>
+          <p class="small">“${esc(b.dispute.reason)}”</p>
+          <div class="row"><label for="rf-${esc(b.id)}" class="small">${t('refund')}</label><input id="rf-${esc(b.id)}" name="refund" type="number" min="0" max="${b.price.total}" value="0" style="max-width:120px"><button class="btn sm" type="submit">${t('resolve')}</button></div></form>`).join('') || `<div class="empty">${t('nothing')}</div>`}</div></div>
+      <div class="section"><h2>${t('recent')}</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>${S.lang === 'hi' ? 'सेवा' : 'Service'}</th><th>${t('date')}</th><th>${t('village')}</th><th>${S.lang === 'hi' ? 'स्थिति' : 'Status'}</th><th>₹</th></tr></thead><tbody>
+        ${o.recent.map((b) => `<tr><td><a href="#b-${esc(b.id)}">${esc(b.id)}</a></td><td>${S.cat.services[b.service].icon} ${esc(nm(S.cat.services[b.service].tasks[b.task]))}</td><td>${esc(b.date)}</td><td>${esc(nm(b.village))}</td><td>${pill(b.status)}</td><td>${rupees(b.price.total)}</td></tr>`).join('')}
+      </tbody></table></div></div>
+      ${demoBar()}`;
+    renderChrome('admin');
+  }
+
+  // ------------------------------------------------------------ router
+
+  async function route() {
+    const h = (location.hash || '#home').slice(1);
+    if (!S.me && h !== 'login') {
+      if (S.token) { try { S.me = await api('GET', '/api/me'); } catch (e) { S.me = null; } }
+      if (!S.me) { if (h !== 'login') { history.replaceState(null, '', '#login'); } return screenLogin(); }
+    }
+    if (S.me && h === 'login') return go('home');
+    try {
+      if (h === 'login') return screenLogin();
+      if (h === 'bookings') return await screenBookings();
+      if (h === 'earn') return await screenEarn();
+      if (h === 'admin') return await screenAdmin();
+      if (h.startsWith('book-')) return screenBook(h.slice(5));
+      if (h.startsWith('b-')) return await screenBooking(h.slice(2));
+      return await screenHome();
+    } catch (e) {
+      view.innerHTML = `${errBox(e)}<a class="btn ghost" href="#home">${t('back')}</a>${demoBar()}`;
+    }
+  }
+
+  async function refreshMe() { S.me = await api('GET', '/api/me'); }
+
+  // ------------------------------------------------------------ events
+
+  document.addEventListener('click', async (ev) => {
+    const el = ev.target.closest('[data-act]');
+    if (!el || el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') return;
+    const act = el.dataset.act, id = el.dataset.id;
+    const errEl = document.getElementById('act-err');
+    try {
+      if (act === 'lang') { S.lang = S.lang === 'hi' ? 'en' : 'hi'; store.set('lang', S.lang); return route(); }
+      if (act === 'logout') { try { await api('POST', '/api/auth/logout', {}); } catch (e) { /* already gone */ } setToken(null); S.me = null; S.ui = {}; toast(t('loggedOut')); return go('login'); }
+      if (act === 'change-no') { S.ui.login = {}; return screenLogin(); }
+      if (act === 'qty') {
+        const task = S.cat.services[S.draft.service].tasks[S.draft.task], unit = K.UNITS[task.unit];
+        S.draft.quantity = Math.round((S.draft.quantity + Number(el.dataset.d) * unit.step) * 10) / 10;
+        return screenBook(S.draft.service);
+      }
+      if (act === 'locate') {
+        if (!navigator.geolocation) throw new Error('Location is not available on this device. Choose your village from the list.');
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          try {
+            const r = await api('GET', `/api/villages/nearest?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+            S.draft.villageId = r.village.id; screenBook(S.draft.service); toast(`📍 ${nm(r.village)} (${r.distanceKm} km)`);
+          } catch (e) { toast(e.message); }
+        }, () => toast(S.lang === 'hi' ? 'लोकेशन नहीं मिली। सूची से गाँव चुनें।' : 'Could not get your location. Choose your village from the list.'), { timeout: 8000 });
+        return;
+      }
+      if (act === 'ui') { S.ui[id] = Object.assign(S.ui[id] || {}, { [el.dataset.k]: el.dataset.v || null }); return route(); }
+      if (act === 'accept') { busy(el, true); await api('POST', `/api/bookings/${id}/accept`, {}); toast(t('accepted')); return route(); }
+      if (act === 'cancel') { busy(el, true); const b = await api('POST', `/api/bookings/${id}/cancel`, { reason: 'customer' }); S.ui[id] = {}; await refreshMe(); toast(b.history[b.history.length - 1].note); return route(); }
+      if (act === 'withdraw') { busy(el, true); await api('POST', `/api/bookings/${id}/withdraw`, {}); S.ui[id] = {}; await refreshMe(); return go('earn'); }
+      if (act === 'edit-profile') { S.ui.editProfile = true; S.ui.join = null; return route(); }
+      if (act === 'cancel-edit') { ev.preventDefault(); S.ui.editProfile = false; S.ui.join = null; return route(); }
+      if (act === 'verify' || act === 'restore') { busy(el, true); await api('POST', `/api/admin/providers/${id}`, act === 'verify' ? { verified: true } : { suspended: false }); return route(); }
+      if (act === 'jump') {
+        const h = location.hash.slice(1);
+        if (h.startsWith('b-')) { // on a booking: jump to that booking's start
+          const cur = await api('GET', '/api/bookings/' + encodeURIComponent(h.slice(2)));
+          if (cur.startsAt > now() && ['requested', 'confirmed'].includes(cur.status)) {
+            S.offset += cur.startsAt - now() + 5 * 60e3; store.set('offset', S.offset);
+            toast(`⏩ ${fmtTime(now())}`); return route();
+          }
+        }
+        const mine = S.me.provider ? (await api('GET', '/api/provider/jobs')).jobs : [];
+        const all = (await api('GET', '/api/bookings')).concat(mine).filter((b) => ['requested', 'confirmed'].includes(b.status) && b.startsAt > now());
+        if (!all.length) return toast(S.lang === 'hi' ? 'आगे कोई काम नहीं है।' : 'No upcoming job to jump to.');
+        const next = Math.min(...all.map((b) => b.startsAt));
+        S.offset += next - now() + 5 * 60e3; store.set('offset', S.offset);
+        toast(`⏩ ${fmtTime(now())}`); return route();
+      }
+      if (act === 'reset') { store.del('store'); store.del('offset'); store.del('token'); location.hash = 'login'; location.reload(); return; }
+    } catch (e) {
+      busy(el, false);
+      if (errEl) errEl.innerHTML = errBox(e); else toast(e.message);
+    }
+  });
+
+  document.addEventListener('change', async (ev) => {
+    const el = ev.target;
+    try {
+      if (el.dataset.act === 'demo-user') {
+        const r = await api('POST', '/api/auth/demo', { phone: el.value });
+        setToken(r.token); S.me = r.user; S.ui = {}; S.draft = null;
+        return go(r.user.isAdmin ? 'admin' : r.user.provider ? 'earn' : 'home');
+      }
+      if (el.dataset.act === 'online') { await api('POST', '/api/provider/online', { online: el.checked }); await refreshMe(); return route(); }
+      if (el.dataset.act === 'star') { S.ui[el.dataset.id] = Object.assign(S.ui[el.dataset.id] || {}, { stars: Number(el.value) }); return route(); }
+      if (el.hasAttribute('data-draft')) {
+        const v = el.value;
+        S.draft[el.name] = v;
+        if (el.name === 'villageId') store.set('village', v);
+        if (el.name === 'task' || el.name === 'slot') { if (el.name === 'task') S.draft.quantity = null; return screenBook(S.draft.service); }
+        return refreshQuote();
+      }
+      if (el.hasAttribute('data-join')) {
+        const j = S.ui.join;
+        if (el.name === 'type') { j.type = el.value; j.skills = []; j.radiusKm = null; return screenJoin(S.me.provider); }
+        if (el.name === 'skills') { j.skills = Array.from(document.querySelectorAll('input[name="skills"]:checked')).map((x) => x.value); return; }
+        j[el.name] = el.value;
+      }
+    } catch (e) { toast(e.message); }
+  });
+
+  document.addEventListener('input', (ev) => {
+    const el = ev.target;
+    if (el.hasAttribute('data-draft') && (el.name === 'landmark' || el.name === 'notes')) {
+      S.draft[el.name] = el.value;
+      if (el.name === 'landmark') store.set('landmark', el.value);
+    }
+    if (el.hasAttribute('data-join') && el.type !== 'radio' && el.type !== 'checkbox') S.ui.join[el.name] = el.value;
+  });
+
+  document.addEventListener('submit', async (ev) => {
+    const form = ev.target.closest('[data-form]');
+    if (!form) return;
+    ev.preventDefault();
+    const kind = form.dataset.form, id = form.dataset.id;
+    const f = Object.fromEntries(new FormData(form));
+    const btn = form.querySelector('[type="submit"]');
+    const errEl = form.querySelector('[id$="-err"]') || document.getElementById('act-err');
+    busy(btn, true);
+    try {
+      if (kind === 'otp') {
+        const phone = K.normPhone(f.phone);
+        const r = await api('POST', '/api/auth/otp', { phone });
+        S.ui.login = { phone, devOtp: r.devOtp, isNewUser: r.isNewUser };
+        screenLogin();
+        const o = document.getElementById('otp'); if (o) o.focus();
+        return;
+      }
+      if (kind === 'verify') {
+        const r = await api('POST', '/api/auth/verify', { phone: S.ui.login.phone, code: f.code, name: f.name });
+        setToken(r.token); S.me = r.user; S.ui = {};
+        return go('home');
+      }
+      if (kind === 'book') {
+        const b = await api('POST', '/api/bookings', S.draft);
+        S.draft = null; await refreshMe(); toast(t('booked'));
+        return go('b-' + b.id);
+      }
+      if (kind === 'start') { await api('POST', `/api/bookings/${id}/start`, { pin: f.pin }); return route(); }
+      if (kind === 'complete') {
+        const body = {};
+        if (f.quantity != null) body.quantity = Number(f.quantity);
+        if (f.extra != null) body.extra = Number(f.extra);
+        const b = await api('POST', `/api/bookings/${id}/complete`, body);
+        toast(`${t('collect')}: ${rupees(b.price.total)}`); await refreshMe(); return route();
+      }
+      if (kind === 'move') { await api('POST', `/api/bookings/${id}/reschedule`, { date: f.date, slot: f.slot }); S.ui[id] = {}; return route(); }
+      if (kind === 'rate') { await api('POST', `/api/bookings/${id}/rate`, { stars: Number(f.stars), comment: f.comment }); return route(); }
+      if (kind === 'dispute') { await api('POST', `/api/bookings/${id}/dispute`, { reason: f.reason }); S.ui[id] = {}; return route(); }
+      if (kind === 'resolve') { await api('POST', `/api/admin/bookings/${id}/resolve`, { refund: Number(f.refund || 0) }); return route(); }
+      if (kind === 'join') {
+        const j = S.ui.join;
+        const r = await api('POST', '/api/provider', { type: j.type, skills: j.skills, villageId: j.villageId, radiusKm: j.radiusKm == null || j.radiusKm === '' ? null : Number(j.radiusKm), vehicle: j.vehicle });
+        S.me = r; S.ui.editProfile = false; S.ui.join = null;
+        return go('earn');
+      }
+    } catch (e) {
+      if (errEl) errEl.innerHTML = errBox(e); else toast(e.message);
+    } finally { busy(btn, false); }
+  });
+
+  window.addEventListener('hashchange', route);
+
+  (async function boot() {
+    await initBackend();
+    try { S.cat = await api('GET', '/api/catalog'); } catch (e) { view.innerHTML = errBox(e); return; }
+    route();
+  })();
+})();
+
+</script>
+</body>
+</html>

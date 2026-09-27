@@ -1,0 +1,20 @@
+# One-click deploy on Render (render.com → New → Blueprint → pick this repo).
+services:
+  - type: web
+    name: khetsaathi
+    runtime: node
+    rootDir: playground/khetsaathi
+    buildCommand: "true"
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: DATA_FILE
+        value: /var/data/db.json
+      - key: ADMIN_PHONES
+        value: "9999999999"
+    disk:
+      name: khetsaathi-data
+      mountPath: /var/data
+      sizeGB: 1
