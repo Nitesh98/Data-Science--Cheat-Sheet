@@ -35,6 +35,18 @@ the subprojects, and the deck is hand-built OOXML via a stdlib `.pptx`
 writer). See its own `README.md` for the full map and how to run
 everything.
 
+## Privacy (the owner's standing rule; applies to every session and every agent)
+
+Never put the repo owner's personal details (their name, email address,
+phone, home address, card or bank details, ID numbers, passwords, or other
+identifying information) into anything that leaves this machine: files,
+commits, commit messages, PR titles or bodies, GitHub comments, screenshots,
+published artifacts, web searches, or prompts to any other service. In
+examples, tests, demos and sample data use neutral wording ("the user") or
+obviously fictional names. The same rule goes into the prompts of any agent
+built here. If existing content already contains such details, point it out
+and ask before changing it.
+
 ## Conventions
 
 - Topic folders use Title Case with spaces (e.g. `Data Visualization`,
