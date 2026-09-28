@@ -208,6 +208,10 @@ class Muse:
 
             self.messages.append({"role": "assistant", "content": content})
             replies += [b["text"] for b in content if b["type"] == "text"]
+            if on_tool:                      # web searches already ran on Anthropic's side; show them too
+                for b in content:
+                    if b["type"] == "server_tool_use":
+                        on_tool(b["name"], b.get("input") or {})
 
             if stop == "pause_turn":         # server-side web search loop hit its limit: resume as-is
                 pauses += 1

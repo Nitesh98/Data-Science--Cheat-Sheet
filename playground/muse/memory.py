@@ -17,6 +17,7 @@ import json
 import math
 import re
 import sqlite3
+import threading
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -74,30 +75,42 @@ def bm25(query, docs, k1=1.5, b=0.75):
     return scores
 
 
-def _similar(a, b):
+def similar(a, b):
     """Jaccard overlap of content words -- catches near-duplicate facts."""
     ta, tb = set(tokenize(a)), set(tokenize(b))
     return len(ta & tb) / len(ta | tb) if ta and tb else 0.0
 
 
+def _locked(method):
+    """Serialize access: the web app calls memory from several request threads."""
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    wrapper.__name__, wrapper.__doc__ = method.__name__, method.__doc__
+    return wrapper
+
+
 class Memory:
     def __init__(self, path):
+        self._lock = threading.RLock()
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(str(path))
+        self.db = sqlite3.connect(str(path), check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
 
+    @_locked
     def _rows(self, sql, args=()):
         return [dict(r) for r in self.db.execute(sql, args)]
 
     # ---------------------------------------------------------------- facts
+    @_locked
     def remember(self, content, category="other", importance=3, source="chat"):
         """Store a fact, or refresh a near-duplicate. Returns (id, 'created'|'updated')."""
         category = category if category in CATEGORIES else "other"
         importance = max(1, min(5, int(importance)))
         for f in self.facts():
-            if f["category"] == category and _similar(f["content"], content) >= 0.6:
+            if f["category"] == category and similar(f["content"], content) >= 0.6:
                 self.db.execute("UPDATE facts SET content=?, importance=MAX(importance, ?), updated_at=? "
                                 "WHERE id=?", (content, importance, now(), f["id"]))
                 self.db.commit()
@@ -108,20 +121,24 @@ class Memory:
         self.db.commit()
         return cur.lastrowid, "created"
 
+    @_locked
     def facts(self, include_inactive=False):
         where = "" if include_inactive else "WHERE active = 1"
         return self._rows(f"SELECT * FROM facts {where} ORDER BY importance DESC, updated_at DESC")
 
+    @_locked
     def fact(self, fact_id):
         rows = self._rows("SELECT * FROM facts WHERE id = ?", (fact_id,))
         return rows[0] if rows else None
 
+    @_locked
     def forget(self, fact_id):
         cur = self.db.execute("UPDATE facts SET active = 0, updated_at = ? WHERE id = ? AND active = 1",
                               (now(), fact_id))
         self.db.commit()
         return cur.rowcount > 0
 
+    @_locked
     def recall(self, query, limit=8, touch=True):
         """Most relevant active facts: BM25 relevance, nudged by importance and recency of use."""
         facts = self.facts()
@@ -140,12 +157,14 @@ class Memory:
         return hits
 
     # ---------------------------------------------------------------- tasks
+    @_locked
     def add_task(self, title, due=None, priority="normal", notes="", goal=None):
         cur = self.db.execute("INSERT INTO tasks (title, due, priority, notes, goal, created_at) "
                               "VALUES (?,?,?,?,?,?)", (title, due, priority, notes, goal, now()))
         self.db.commit()
         return cur.lastrowid
 
+    @_locked
     def tasks(self, status="open", goal=None):
         sql, args = "SELECT * FROM tasks WHERE 1=1", []
         if status != "all":
@@ -158,48 +177,58 @@ class Memory:
         sql += (" ORDER BY due IS NULL, due, CASE priority WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END, id")
         return self._rows(sql, args)
 
+    @_locked
     def complete_task(self, task_id):
         cur = self.db.execute("UPDATE tasks SET status='done', done_at=? WHERE id=? AND status='open'",
                               (now(), task_id))
         self.db.commit()
         return cur.rowcount > 0
 
+    @_locked
     def due_tasks(self, today):
         """(overdue, due_today) open tasks, comparing ISO date prefixes to `today` (YYYY-MM-DD)."""
         dated = [t for t in self.tasks() if t["due"]]
         return ([t for t in dated if t["due"][:10] < today], [t for t in dated if t["due"][:10] == today])
 
     # ---------------------------------------------------------------- notes
+    @_locked
     def save_note(self, title, body, tags=""):
         cur = self.db.execute("INSERT INTO notes (title, body, tags, created_at) VALUES (?,?,?,?)",
                               (title, body, tags, now()))
         self.db.commit()
         return cur.lastrowid
 
+    @_locked
     def notes(self):
         return self._rows("SELECT * FROM notes ORDER BY id DESC")
 
+    @_locked
     def search_notes(self, query, limit=3):
         notes = self.notes()
         scores = bm25(query, [f"{n['title']} {n['tags']} {n['body']}" for n in notes])
         return [n for s, n in sorted(zip(scores, notes), key=lambda x: -x[0]) if s > 0][:limit]
 
     # ------------------------------------------------------------- episodes
+    @_locked
     def add_episode(self, started_at, summary):
         self.db.execute("INSERT INTO episodes (started_at, ended_at, summary) VALUES (?,?,?)",
                         (started_at, now(), summary))
         self.db.commit()
 
+    @_locked
     def episodes(self, limit=3):
         return self._rows("SELECT * FROM episodes ORDER BY id DESC LIMIT ?", (limit,))
 
     # ------------------------------------------------------- user controls
+    @_locked
     def export(self):
         return {t: self._rows(f"SELECT * FROM {t}") for t in ("facts", "tasks", "notes", "episodes")}
 
+    @_locked
     def export_json(self, path):
         Path(path).write_text(json.dumps(self.export(), indent=2))
 
+    @_locked
     def wipe(self):
         for t in ("facts", "tasks", "notes", "episodes"):
             self.db.execute(f"DELETE FROM {t}")

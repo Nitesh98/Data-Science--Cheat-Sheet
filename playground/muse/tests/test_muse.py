@@ -138,6 +138,13 @@ class ToolTests(unittest.TestCase):
         self.assertEqual([t["title"] for t in self.mem.tasks(goal="Run a 10k")], ["Run 3k", "Run 5k"])
         self.assertEqual(self.mem.facts()[0]["category"], "goal")
 
+    def test_plan_does_not_duplicate_a_remembered_goal(self):
+        self.mem.remember("The user is training for a 10k race in December", "goal", 4)
+        self.box.run("create_plan", {"goal": "Run a 10k in December", "steps": [{"title": "Run 3k"}]})
+        self.assertEqual(len(self.mem.facts()), 1)
+        self.box.run("create_plan", {"goal": "Learn conversational Spanish", "steps": [{"title": "Lesson 1"}]})
+        self.assertEqual(len(self.mem.facts()), 2)
+
     def test_bad_due_date_saves_nothing(self):
         out, _ = self.box.run("create_plan", {"goal": "g", "steps": [{"title": "a", "due": "next friday"}]})
         self.assertIn("not ISO", out)
@@ -226,6 +233,68 @@ class AgentLoopTests(unittest.TestCase):
         m.incognito = True
         m.respond("hi")
         self.assertIsNone(m.reflect())
+
+
+class WebAppTests(unittest.TestCase):
+    """The browser app's server, exercised over real HTTP on a random local port."""
+
+    def setUp(self):
+        import threading
+        from http.server import ThreadingHTTPServer
+        import web
+        self.mem = Memory(":memory:")
+        self.fake = FakeClaude()
+        web.Handler.app = web.App(self.mem, call=self.fake)
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), web.Handler)
+        self.port = self.server.server_address[1]
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def req(self, method, path, body=None, headers=None):
+        import http.client
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        h = {"Content-Type": "application/json", "X-Muse": "1", **(headers or {})}
+        c.request(method, path, json.dumps(body) if body is not None else None, {k: v for k, v in h.items() if v})
+        r = c.getresponse()
+        return r.status, r.read().decode()
+
+    def test_rejects_foreign_pages_and_hosts(self):
+        self.assertEqual(self.req("POST", "/api/wipe", {}, {"X-Muse": None})[0], 403)
+        self.assertEqual(self.req("GET", "/api/state", headers={"Host": "evil.example"})[0], 403)
+        self.assertEqual(self.req("GET", "/../config.py")[0], 404)
+        self.assertEqual(self.req("GET", "/")[0], 200)
+
+    def test_chat_streams_events_and_updates_state(self):
+        self.fake.responses += [reply(text("Noted."), tool("remember", {"content": "The user likes tea", "category":
+                                "preference", "importance": 3}), stop="tool_use"), reply(text("Tea it is."))]
+        status, body = self.req("POST", "/api/chat", {"message": "I like tea"})
+        self.assertEqual(status, 200)
+        events = [line[7:] for line in body.splitlines() if line.startswith("event: ")]
+        self.assertEqual(events, ["text", "tool", "text", "done"])
+        state = json.loads(self.req("GET", "/api/state")[1])
+        self.assertEqual([f["content"] for f in state["facts"]], ["The user likes tea"])
+
+    def test_approval_waits_for_the_browser(self):
+        import threading
+        fid, _ = self.mem.remember("The user likes jazz", "preference", 2)
+        self.fake.responses += [reply(tool("forget", {"fact_id": fid, "reason": "asked"}), stop="tool_use"),
+                                reply(text("Done."))]
+        out = {}
+        t = threading.Thread(target=lambda: out.update(r=self.req("POST", "/api/chat", {"message": "forget jazz"})))
+        t.start()
+        app = __import__("web").Handler.app
+        for _ in range(100):
+            if app.pending:
+                break
+            __import__("time").sleep(0.02)
+        (aid,) = app.pending
+        self.assertEqual(self.req("POST", "/api/approve", {"id": aid, "ok": True})[0], 200)
+        t.join(5)
+        self.assertIn("event: approval_result", out["r"][1])
+        self.assertEqual(self.mem.facts(), [])
 
 
 if __name__ == "__main__":

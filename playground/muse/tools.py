@@ -16,7 +16,7 @@ import operator
 import re
 from datetime import datetime
 
-from memory import CATEGORIES
+from memory import CATEGORIES, similar
 
 _PRIORITY = ["low", "normal", "high"]
 
@@ -226,7 +226,8 @@ class Toolbox:
         bad = [s["due"] for s in steps if s.get("due") and not _valid_date(s["due"])]
         if bad:
             return f"These dues are not ISO dates: {bad}. Fix and retry; nothing was saved."
-        self.mem.remember(f"Goal: {goal}", "goal", 4)
+        if not any(similar(f["content"], goal) >= 0.3 for f in self.mem.facts() if f["category"] == "goal"):
+            self.mem.remember(f"Goal: {goal}", "goal", 4)
         ids = [self.mem.add_task(s["title"], s.get("due"), "normal", "", goal) for s in steps]
         return f"Goal saved; created tasks {', '.join('#%d' % i for i in ids)}."
 
