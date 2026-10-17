@@ -1,4 +1,4 @@
-# Physics Reels: a daily Short for @Insightloopin
+# Physics Reels: a daily Short and Reel for Insightloop
 
 Makes a **ready-to-upload, 9:16 physics Short every day**: animated physics visuals, big readable
 captions (most viewers watch muted), your handle, a progress bar, an **original calm background
@@ -31,6 +31,17 @@ a script to choose a variation, `"music": false` (or `--no-music`) for silence.
 A famous viral song can't be baked into the file: it would be claimed or muted. If you want one, add
 it from YouTube's own sound library when you upload; it's licensed there. Keep the original track
 quiet under it, or render with `--no-music`.
+
+## Handles (remembered)
+
+| Platform | Handle | What you get |
+|---|---|---|
+| YouTube | **@Insightloopin** | `day-NNN-youtube.mp4`, `-youtube-cover-9x16.png`, `-youtube-cover-16x9.png`, `-youtube-upload.txt` (title, description, hashtags, pinned comment) |
+| Instagram | **@insightloop_in** | `day-NNN-instagram.mp4`, `-instagram-cover-9x16.png`, `-instagram-caption.txt` (one caption, ready to paste) |
+
+Each platform's video and cover show only its own handle. Mentioning another platform on screen can hurt
+how much Instagram shows a reel. The handles live in `render.js` (`PLATFORMS`), and a script can override
+them with `"handles"`. `--only youtube` or `--only instagram` renders just one.
 
 ## How it's made (a small agent team)
 

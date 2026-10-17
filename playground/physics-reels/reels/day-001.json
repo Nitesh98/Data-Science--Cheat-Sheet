@@ -1,7 +1,10 @@
 {
   "day": 1,
   "title": "Hammer vs feather",
-  "handle": "@Insightloopin",
+  "handles": {
+    "youtube": "@Insightloopin",
+    "instagram": "@insightloop_in"
+  },
   "fps": 30,
   "thumbnail_at": 1.2,
   "scenes": [
