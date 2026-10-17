@@ -169,5 +169,25 @@
     "by": "fact-checker subagent",
     "date": "2026-10-17",
     "notes": "7 fixes applied: Aristotle framing, ≈ on rounded g values, airless Moon wording, shorter hook, looping ending, precise description, second source."
+  },
+  "cover": {
+    "headline": [
+      "HAMMER",
+      "vs FEATHER"
+    ],
+    "highlight": "FEATHER",
+    "question": "Which lands first?",
+    "tag": "ON THE MOON",
+    "visual": {
+      "type": "fall",
+      "objects": [
+        "hammer",
+        "feather"
+      ],
+      "air": false,
+      "delay": 99,
+      "noLabel": true,
+      "scale": 1.5
+    }
   }
 }

@@ -4,6 +4,7 @@
  *   node render.js reels/day-001.json            -> out/day-001.mp4 (or .webm), thumbnail + upload text
  *   node render.js reels/day-001.json --stills   -> also saves a few still frames for a quick look
  *   node render.js reels/day-001.json --no-music -> silent video (music is on by default; see music.js)
+ *   node render.js reels/day-001.json --covers   -> only the cover images (fast; no video)
  *
  * Needs Node + Playwright (Chromium). Uses a system ffmpeg with libx264 when present (MP4, works
  * everywhere incl. Instagram); otherwise falls back to Playwright's bundled ffmpeg (WebM VP8,
@@ -41,6 +42,13 @@ function pickEncoder() {
   await page.goto("file://" + path.join(__dirname, "engine.html"));
   await page.evaluate(() => document.fonts.ready);
   const { duration, fps } = await page.evaluate((s) => window.reel.load(s), spec);
+  if (process.argv.includes("--covers")) {
+    for (const [label, w, h] of [["9x16", 1080, 1920], ["16x9", 1280, 720]]) {
+      const png = await page.evaluate(({ s, w, h }) => window.reel.cover(s, w, h).split(",")[1], { s: spec, w, h });
+      fs.writeFileSync(path.join(outDir, `${name}-cover-${label}.png`), Buffer.from(png, "base64"));
+    }
+    await browser.close(); console.log("covers written"); return;
+  }
   const n = Math.round(duration * fps);
 
   const ff = spawn(enc.bin, ["-y", "-hide_banner", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps), "-c:v", "mjpeg", "-i", enc.input,
@@ -71,6 +79,11 @@ function pickEncoder() {
     execFileSync(enc.bin, ["-y", "-hide_banner", "-loglevel", "error", "-i", videoFile, "-i", audioFile,
       "-map", "0:v:0", "-map", "1:a:0", ...audioArgs, "-shortest", outFile]);
     fs.unlinkSync(videoFile);
+  }
+  // covers: 9:16 for Reels/Shorts (inside Instagram's 3:4 grid crop) and 16:9 for YouTube
+  for (const [label, w, h] of [["9x16", 1080, 1920], ["16x9", 1280, 720]]) {
+    const png = await page.evaluate(({ s, w, h }) => window.reel.cover(s, w, h).split(",")[1], { s: spec, w, h });
+    fs.writeFileSync(path.join(outDir, `${name}-cover-${label}.png`), Buffer.from(png, "base64"));
   }
   await browser.close();
 

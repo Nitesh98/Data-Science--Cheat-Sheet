@@ -4,6 +4,22 @@ Makes a **ready-to-upload, 9:16 physics Short every day**: animated physics visu
 captions (most viewers watch muted), your handle, a progress bar, an **original calm background
 track**, and the title, description, hashtags and pinned comment to paste into YouTube.
 
+## Cover images
+
+Every render also writes two covers built from the script's `cover` block (big headline, one word in
+amber, a question, a tag pill, the topic's visual and a giant "?"):
+
+- `day-NNN-cover-9x16.png` (1080×1920): the Instagram Reel cover and the YouTube Shorts thumbnail.
+  Everything important sits inside the centre 3:4 area, so Instagram's profile grid doesn't crop it.
+- `day-NNN-cover-16x9.png` (1280×720): a YouTube thumbnail.
+
+```json
+"cover": { "headline": ["HAMMER", "vs FEATHER"], "highlight": "FEATHER", "question": "Which lands first?",
+           "tag": "ON THE MOON", "visual": { "type": "fall", "air": false, "delay": 99, "scale": 1.5, "noLabel": true } }
+```
+
+`node render.js reels/day-NNN.json --covers` makes only the covers, in a few seconds.
+
 ## Background music
 
 `music.js` composes an original ambient track for each reel in the browser's audio engine: soft pads,

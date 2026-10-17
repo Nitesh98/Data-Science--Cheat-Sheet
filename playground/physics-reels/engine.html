@@ -32,7 +32,7 @@ const C = {
 };
 const FONT = '"Liberation Sans", "DejaVu Sans", Arial, sans-serif';
 const VIS = { x: 70, y: 250, w: 940, h: 820 };
-const ctx = document.getElementById("c").getContext("2d");
+let ctx = document.getElementById("c").getContext("2d");   // swapped temporarily when drawing covers
 
 // ---------------------------------------------------------------- helpers
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -101,7 +101,7 @@ V.fall = (t, p) => {
   if (p.place) text(p.place, VIS.x + VIS.w / 2, gy + 50, { size: 34, color: C.dim, weight: "700" });
   if (p.air) for (let i = 0; i < 26; i++) { const r = rng(i + 7); const ax = VIS.x + r() * VIS.w, ay = VIS.y + 60 + r() * (VIS.h - 160);
     ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.arc(ax + Math.sin(t * 2 + i) * 8, ay, 5, 0, 7); ctx.fill(); ctx.restore(); }
-  else text("NO AIR", VIS.x + VIS.w - 60, VIS.y + 40, { size: 30, color: C.cyan, align: "right" });
+  else if (!p.noLabel) text("NO AIR", VIS.x + VIS.w - 60, VIS.y + 40, { size: 30, color: C.cyan, align: "right" });
   const tt = Math.max(0, t - delay), H0 = gy - top - 120;
   (p.objects || ["hammer", "feather"]).forEach((name, i) => {
     let y, rot = 0, x = xs[i];
@@ -109,7 +109,7 @@ V.fall = (t, p) => {
     if (isLight) { const v = H0 / (dropT * 3.2); y = top + Math.min(H0, v * tt * 0.9); x += Math.sin(tt * 3) * 50; rot = Math.sin(tt * 3) * 0.35; }
     else y = top + Math.min(H0, H0 * (tt / dropT) ** 2);
     const landed = !isLight && tt >= dropT;
-    (OBJECTS[name] || OBJECTS.ball)(x, y, 0.9, name === "hammer" ? Math.PI / 2 * 0 : rot);
+    (OBJECTS[name] || OBJECTS.ball)(x, y, p.scale || 0.9, rot);
     if (landed && tt - dropT < 0.5) { ctx.save(); ctx.globalAlpha = 1 - (tt - dropT) / 0.5; ctx.strokeStyle = C.amber; ctx.lineWidth = 6;
       ctx.beginPath(); ctx.arc(x, gy, 40 + (tt - dropT) * 220, Math.PI, 0); ctx.stroke(); ctx.restore(); }
   });
@@ -352,7 +352,65 @@ function frame(t) {
   captions(sc, lt);
   chrome(t, TOTAL, SPEC);
 }
-window.reel = { load, frame, canvas: document.getElementById("c") };
+// ---------------------------------------------------------------- covers (thumbnails)
+/*
+ * spec.cover = { headline: ["HAMMER", "vs FEATHER"], highlight: "FEATHER", question: "Which lands first?",
+ *                tag: "ON THE MOON", visual: { type: "fall", ... }, t: 0 }
+ * Portrait 1080x1920 keeps everything inside the centre 1080x1440 (Instagram's 3:4 grid crop);
+ * landscape 1280x720 puts the visual left and the words right.
+ */
+function fitText(str, maxW, size, weight = "900") {
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  while (ctx.measureText(str).width > maxW && size > 30) { size -= 4; ctx.font = `${weight} ${size}px ${FONT}`; }
+  return size;
+}
+function bigWord(str, x, y, size, color, align = "center") {
+  ctx.save(); ctx.font = `900 ${size}px ${FONT}`; ctx.textAlign = align; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  ctx.lineWidth = size * 0.16; ctx.strokeStyle = "#05070f"; ctx.strokeText(str, x, y);
+  ctx.shadowColor = color === C.amber ? "rgba(255,184,51,0.55)" : "rgba(63,208,255,0.35)"; ctx.shadowBlur = 40;
+  ctx.fillStyle = color; ctx.fillText(str, x, y); ctx.restore();
+}
+function pill(str, cx, cy, size, bg, fg) {
+  ctx.font = `800 ${size}px ${FONT}`; const w = ctx.measureText(str).width + size * 1.4, h = size * 1.7;
+  ctx.fillStyle = bg; roundRect(cx - w / 2, cy - h / 2, w, h, h / 2); ctx.fill();
+  text(str, cx, cy + 2, { size, color: fg, weight: "800" });
+}
+function cover(spec, w, h) {
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const keep = ctx, keepVis = { ...VIS }; ctx = cv.getContext("2d");
+  const c = spec.cover || {}, portrait = h > w;
+  const g = ctx.createRadialGradient(w * 0.5, h * 0.35, 50, w * 0.5, h * 0.45, Math.max(w, h) * 0.8);
+  g.addColorStop(0, "#22305f"); g.addColorStop(1, C.bg1); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 2;
+  for (let x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  const words = c.headline || [spec.title.toUpperCase()], hl = (c.highlight || "").toUpperCase();
+  const colorFor = (line) => (hl && line.toUpperCase().includes(hl) ? C.amber : C.ink);
+  if (portrait) {
+    // safe zone: y 240..1680 (Instagram grid 3:4); visual in its upper half
+    Object.assign(VIS, { x: 90, y: 400, w: 900, h: 600 });
+    (V[c.visual?.type] || V.none)(c.t ?? 0, c.visual || {}, 1);
+    if (c.mark !== false) bigWord(c.mark || "?", w / 2, 680, 260, C.amber);
+    if (c.tag) pill(c.tag, w / 2, 300, 40, C.cyan, "#06121f");
+    let y = 1130;
+    for (const line of words) { const size = fitText(line, w - 120, 170); bigWord(line, w / 2, y, size, colorFor(line)); y += size * 1.02; }
+    if (c.question) { const qs = fitText(c.question, w - 160, 66, "800"); bigWord(c.question, w / 2, y + 30, qs, C.ink); }
+    text(spec.handle || "@Insightloopin", w / 2, 1640, { size: 40, color: C.dim });
+  } else {
+    Object.assign(VIS, { x: 20, y: 130, w: 560, h: 560 });
+    (V[c.visual?.type] || V.none)(c.t ?? 0, c.visual || {}, 1);
+    if (c.mark !== false) bigWord(c.mark || "?", 300, 400, 200, C.amber);
+    if (c.tag) pill(c.tag, 930, 110, 34, C.cyan, "#06121f");
+    let y = 260;
+    for (const line of words) { const size = fitText(line, 620, 120); bigWord(line, 930, y, size, colorFor(line)); y += size * 1.05; }
+    if (c.question) { const qs = fitText(c.question, 620, 54, "800"); bigWord(c.question, 930, y + 20, qs, C.ink); }
+    text(spec.handle || "@Insightloopin", 930, 670, { size: 32, color: C.dim });
+  }
+  Object.assign(VIS, keepVis); ctx = keep;
+  return cv.toDataURL("image/png");
+}
+
+window.reel = { load, frame, cover, canvas: document.getElementById("c") };
 
 // live preview: engine.html?spec=reels/day-001.json
 const q = new URLSearchParams(location.search).get("spec");
