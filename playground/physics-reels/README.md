@@ -34,8 +34,14 @@ npm i -D playwright && npx playwright install chromium     # once
 node render.js reels/day-001.json --stills                 # -> out/day-001.mp4 + thumbnail + upload text
 ```
 
-With a normal `ffmpeg` (with libx264) installed you get an **MP4** (works on YouTube *and* Instagram).
-Without one it falls back to Playwright's bundled ffmpeg and writes **WebM**, which YouTube accepts.
+With a normal `ffmpeg` (with libx264) installed you get an **MP4** with H.264 and AAC, which works on
+YouTube, Instagram and iPhone. Without one it falls back to Playwright's bundled ffmpeg and writes
+**WebM**, which YouTube accepts. No ffmpeg and no admin rights? npm ships one:
+
+```bash
+npm install @ffmpeg-installer/linux-x64          # or the -darwin-arm64 / -win32-x64 package
+export FFMPEG=$PWD/node_modules/@ffmpeg-installer/linux-x64/ffmpeg
+```
 Preview a script live in a browser: open `engine.html?spec=reels/day-001.json` from a local web server.
 
 ## The visual library (`engine.html`)
@@ -57,8 +63,8 @@ the fact-checker used.
 
 A scheduled cloud routine runs each morning (08:47 IST). It takes the next topic from the calendar,
 writes the script, has the fact-checker subagent approve it, renders the video, and pushes it to the
-`daily-reels` branch of this repo. Each day's folder holds `day-NNN.webm`, its thumbnail and
-`upload.txt`. Download it from GitHub on your phone, add music in the YouTube app, and post.
+routine's own branch of this repo: `day-NNN.mp4` (with music), its thumbnail and `upload.txt`.
+You get a phone notification and an email with the link. Download it from GitHub on your phone, add music in the YouTube app, and post.
 Suggested posting slot: 7–8 PM IST; check your Studio retention data and adjust.
 
 ## Notes
