@@ -1,9 +1,20 @@
 # Physics Reels: a daily Short for @Insightloopin
 
 Makes a **ready-to-upload, 9:16 physics Short every day**: animated physics visuals, big readable
-captions (most viewers watch muted), your handle, a progress bar, and the title, description,
-hashtags and pinned comment to paste into YouTube. Captions only: add a trending sound in the
-YouTube app when you upload.
+captions (most viewers watch muted), your handle, a progress bar, an **original calm background
+track**, and the title, description, hashtags and pinned comment to paste into YouTube.
+
+## Background music
+
+`music.js` composes an original ambient track for each reel in the browser's audio engine: soft pads,
+a slow plucked arpeggio, deep bass, reverb, and a fade in and out. Nothing is sampled, so it is yours
+and safe from Content ID claims. The day number picks the key, tempo (66–75 BPM) and chord
+progression, so every reel sounds related but different. Set `"music": {"seed": 7, "volume": 0.9}` in
+a script to choose a variation, `"music": false` (or `--no-music`) for silence.
+
+A famous viral song can't be baked into the file: it would be claimed or muted. If you want one, add
+it from YouTube's own sound library when you upload; it's licensed there. Keep the original track
+quiet under it, or render with `--no-music`.
 
 ## How it's made (a small agent team)
 
