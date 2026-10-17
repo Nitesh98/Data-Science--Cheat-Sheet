@@ -1,0 +1,173 @@
+{
+  "day": 1,
+  "title": "Hammer vs feather",
+  "handle": "@Insightloopin",
+  "fps": 30,
+  "thumbnail_at": 1.2,
+  "scenes": [
+    {
+      "dur": 2.5,
+      "big": true,
+      "text": "A hammer and a feather. Which lands first?",
+      "highlight": [
+        "hammer",
+        "feather."
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": true,
+        "delay": 99,
+        "place": "EARTH"
+      }
+    },
+    {
+      "dur": 5,
+      "text": "On Earth, the hammer wins easily.",
+      "highlight": [
+        "hammer",
+        "easily."
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": true,
+        "delay": 0.3,
+        "drop": 1.3,
+        "place": "EARTH",
+        "stopwatch": true
+      }
+    },
+    {
+      "dur": 5,
+      "text": "So heavier things fall faster, right?",
+      "highlight": [
+        "faster,"
+      ],
+      "visual": {
+        "type": "formula",
+        "text": "heavy = faster?",
+        "size": 104,
+        "sub": "Aristotle's idea, taught for nearly 2,000 years"
+      }
+    },
+    {
+      "dur": 5.5,
+      "text": "Nope. The feather isn't losing to gravity. It's losing to the AIR.",
+      "highlight": [
+        "air."
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": true,
+        "delay": 0.2,
+        "drop": 1.3,
+        "place": "EARTH"
+      }
+    },
+    {
+      "dur": 6,
+      "text": "1971: on the airless Moon, astronaut David Scott tried it.",
+      "highlight": [
+        "airless",
+        "moon,"
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": false,
+        "delay": 99,
+        "place": "MOON  ·  APOLLO 15"
+      }
+    },
+    {
+      "dur": 4.5,
+      "text": "They landed at the same time.",
+      "highlight": [
+        "same",
+        "time."
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": false,
+        "delay": 0.3,
+        "drop": 1.6,
+        "place": "MOON  ·  APOLLO 15",
+        "stopwatch": true
+      }
+    },
+    {
+      "dur": 6,
+      "text": "Without air, everything falls with the same acceleration, whatever its mass.",
+      "highlight": [
+        "same",
+        "acceleration,"
+      ],
+      "visual": {
+        "type": "formula",
+        "text": "a = g",
+        "size": 150,
+        "sub": "≈ 9.8 m/s² on Earth  ·  ≈ 1.6 m/s² on the Moon"
+      }
+    },
+    {
+      "dur": 4,
+      "big": true,
+      "text": "Follow for daily physics. Now, on Earth: a hammer and a feather…",
+      "highlight": [
+        "follow",
+        "hammer",
+        "feather…"
+      ],
+      "visual": {
+        "type": "fall",
+        "objects": [
+          "hammer",
+          "feather"
+        ],
+        "air": true,
+        "delay": 99,
+        "place": "EARTH"
+      }
+    }
+  ],
+  "upload": {
+    "title": "Hammer vs Feather on the Moon: Which Lands First? #physics #shorts",
+    "description": "On Earth the hammer wins, but not because it's heavier. Air resistance slows the light, wide feather. In 1971 Apollo 15 astronaut David Scott dropped a hammer and a falcon feather on the Moon, with no air, and they hit the ground together. In a vacuum, objects at the same place fall with the same acceleration, whatever their mass (about 9.8 m/s² on Earth, 1.6 m/s² on the Moon).",
+    "hashtags": [
+      "#physics",
+      "#science",
+      "#shorts",
+      "#sciencefacts",
+      "#apollo15"
+    ],
+    "pinned_comment": "Before you watched: hammer or feather? Be honest 👇"
+  },
+  "sources": [
+    "NASA, Apollo 15 hammer-feather drop (2 Aug 1971): https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo_15_feather_drop.html",
+    "NASA SP-289, Apollo 15 Preliminary Science Report (hammer 1.32 kg, falcon feather 0.03 kg, dropped from about 1.6 m)"
+  ],
+  "fact_check": {
+    "verdict": "approved after fixes",
+    "by": "fact-checker subagent",
+    "date": "2026-10-17",
+    "notes": "7 fixes applied: Aristotle framing, ≈ on rounded g values, airless Moon wording, shorter hook, looping ending, precise description, second source."
+  }
+}

@@ -1,0 +1,362 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Physics reel engine</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 360px; height: 640px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/*
+ * Physics reel engine: draws ONE frame of a reel at time t (seconds), deterministically.
+ * render.mjs loads this page, calls window.reel.load(spec), then window.reel.frame(t) for
+ * every frame and captures the canvas. Open the page in a browser with ?spec=reels/day-001.json
+ * to preview it live.
+ *
+ * Layout (1080x1920, YouTube Shorts safe zones):
+ *   top 0-230      progress bar, channel handle, series tag
+ *   230-1090       the physics visual
+ *   1110-1500      captions (clear of the Shorts title/buttons overlay at the bottom and right)
+ *   1500-1920      left mostly empty: YouTube draws its own UI here
+ */
+const W = 1080, H = 1920;
+const C = {
+  bg1: "#0b1020", bg2: "#131c38", grid: "rgba(120,150,255,0.07)",
+  ink: "#f4f6ff", dim: "#9aa6c8", cyan: "#3fd0ff", amber: "#ffb833", pink: "#ff5c8a",
+  green: "#52e38a", violet: "#a98bff", ground: "#56607f",
+};
+const FONT = '"Liberation Sans", "DejaVu Sans", Arial, sans-serif';
+const VIS = { x: 70, y: 250, w: 940, h: 820 };
+const ctx = document.getElementById("c").getContext("2d");
+
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+function rng(seed) {            // mulberry32: well-mixed even for neighbouring seeds
+  let a = (Math.imul(seed + 1, 2654435761) ^ 0x9e3779b9) >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function text(str, x, y, { size = 40, color = C.ink, weight = "700", align = "center", base = "middle", alpha = 1 } = {}) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.font = `${weight} ${size}px ${FONT}`;
+  ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(str, x, y); ctx.restore();
+}
+function arrow(x1, y1, x2, y2, color, w = 8, head = 26) {
+  const a = Math.atan2(y2 - y1, x2 - x1), len = Math.hypot(x2 - x1, y2 - y1);
+  if (len < 2) return;
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - Math.cos(a) * head * 0.7, y2 - Math.sin(a) * head * 0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - Math.cos(a - 0.45) * head, y2 - Math.sin(a - 0.45) * head);
+  ctx.lineTo(x2 - Math.cos(a + 0.45) * head, y2 - Math.sin(a + 0.45) * head); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function glowCircle(x, y, r, color, glow = 30) {
+  ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = glow; ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+function line(pts, color, w = 4, alpha = 1) {
+  if (pts.length < 2) return;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); ctx.restore();
+}
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+
+// ---------------------------------------------------------------- objects
+function drawHammer(x, y, s = 1, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  ctx.fillStyle = "#c9a26b"; roundRect(-10, -10, 20, 150, 8); ctx.fill();          // handle
+  ctx.fillStyle = "#cfd6e6"; roundRect(-70, -50, 140, 55, 10); ctx.fill();          // head
+  ctx.fillStyle = "#8f98b0"; roundRect(-70, -50, 22, 55, 6); ctx.fill();
+  ctx.restore();
+}
+function drawFeather(x, y, s = 1, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  ctx.fillStyle = "#f2efe6";
+  ctx.beginPath(); ctx.moveTo(0, -110);
+  ctx.bezierCurveTo(70, -60, 60, 50, 6, 100); ctx.lineTo(-6, 100);
+  ctx.bezierCurveTo(-60, 50, -70, -60, 0, -110); ctx.fill();
+  ctx.strokeStyle = "#b9b2a0"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, -105); ctx.lineTo(0, 140); ctx.stroke();
+  ctx.strokeStyle = "rgba(160,150,130,0.6)"; ctx.lineWidth = 2;
+  for (let k = -80; k < 90; k += 16) { ctx.beginPath(); ctx.moveTo(0, k); ctx.lineTo(42, k - 26); ctx.moveTo(0, k); ctx.lineTo(-42, k - 26); ctx.stroke(); }
+  ctx.restore();
+}
+function drawBall(x, y, r, color) { glowCircle(x, y, r, color, 24); }
+const OBJECTS = { hammer: drawHammer, feather: drawFeather,
+  ball: (x, y, s) => drawBall(x, y, 46 * s, C.amber), bullet: (x, y, s) => { ctx.save(); ctx.fillStyle = C.amber; roundRect(x - 34 * s, y - 14 * s, 68 * s, 28 * s, 14 * s); ctx.fill(); ctx.restore(); } };
+
+// ---------------------------------------------------------------- visuals: draw(t, p, T) where t = seconds into the scene, T = scene length
+const V = {};
+
+V.fall = (t, p) => {
+  // p.objects [a, b], p.air: true|false, p.place label, p.drop (s to land, no air)
+  const gy = VIS.y + VIS.h - 40, top = VIS.y + 120, dropT = p.drop || 1.6, delay = p.delay ?? 0.5;
+  const xs = [VIS.x + VIS.w * 0.3, VIS.x + VIS.w * 0.7];
+  line([[VIS.x + 40, gy], [VIS.x + VIS.w - 40, gy]], C.ground, 6);
+  if (p.place) text(p.place, VIS.x + VIS.w / 2, gy + 50, { size: 34, color: C.dim, weight: "700" });
+  if (p.air) for (let i = 0; i < 26; i++) { const r = rng(i + 7); const ax = VIS.x + r() * VIS.w, ay = VIS.y + 60 + r() * (VIS.h - 160);
+    ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = C.cyan; ctx.beginPath(); ctx.arc(ax + Math.sin(t * 2 + i) * 8, ay, 5, 0, 7); ctx.fill(); ctx.restore(); }
+  else text("NO AIR", VIS.x + VIS.w - 60, VIS.y + 40, { size: 30, color: C.cyan, align: "right" });
+  const tt = Math.max(0, t - delay), H0 = gy - top - 120;
+  (p.objects || ["hammer", "feather"]).forEach((name, i) => {
+    let y, rot = 0, x = xs[i];
+    const isLight = name === "feather" && p.air;
+    if (isLight) { const v = H0 / (dropT * 3.2); y = top + Math.min(H0, v * tt * 0.9); x += Math.sin(tt * 3) * 50; rot = Math.sin(tt * 3) * 0.35; }
+    else y = top + Math.min(H0, H0 * (tt / dropT) ** 2);
+    const landed = !isLight && tt >= dropT;
+    (OBJECTS[name] || OBJECTS.ball)(x, y, 0.9, name === "hammer" ? Math.PI / 2 * 0 : rot);
+    if (landed && tt - dropT < 0.5) { ctx.save(); ctx.globalAlpha = 1 - (tt - dropT) / 0.5; ctx.strokeStyle = C.amber; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(x, gy, 40 + (tt - dropT) * 220, Math.PI, 0); ctx.stroke(); ctx.restore(); }
+  });
+  if (p.stopwatch) { const s = Math.min(tt, p.air ? dropT * 3.2 : dropT); text(s.toFixed(2) + " s", VIS.x + 60, VIS.y + 40, { size: 44, color: C.amber, align: "left" }); }
+};
+
+V.projectile = (t, p) => {
+  // p.mode "drop-vs-fire": one object dropped, one fired sideways from the same height
+  const gy = VIS.y + VIS.h - 60, top = VIS.y + 140, x0 = VIS.x + 110, fall = p.fall || 1.8, delay = 0.6;
+  line([[VIS.x + 30, gy], [VIS.x + VIS.w - 30, gy]], C.ground, 6);
+  ctx.fillStyle = "#2a355c"; roundRect(VIS.x + 30, top - 20, 120, gy - top + 20, 10); ctx.fill();   // tower
+  const tt = clamp(t - delay, 0, fall), k = tt / fall, H0 = gy - top - 30, vx = (VIS.w - 260) / fall;
+  const yAt = (s) => top + H0 * (s / fall) ** 2;
+  const trail = [], trail2 = [];
+  for (let s = 0; s <= tt; s += fall / 60) { trail.push([x0 + 40 + vx * s, yAt(s)]); trail2.push([x0, yAt(s)]); }
+  line(trail, C.amber, 4, 0.5); line(trail2, C.cyan, 4, 0.5);
+  for (let m = 1; m <= 4; m++) { const s = fall * m / 4; if (tt >= s) line([[x0 - 60, yAt(s)], [x0 + 40 + vx * s + 60, yAt(s)]], C.dim, 2, 0.35); }
+  drawBall(x0, yAt(tt), 30, C.cyan); drawBall(x0 + 40 + vx * tt, yAt(tt), 30, C.amber);
+  text(p.labelA || "dropped", x0, top - 60, { size: 32, color: C.cyan });
+  text(p.labelB || "fired", x0 + 220, top - 60, { size: 32, color: C.amber });
+  if (k >= 1) text("SAME TIME", VIS.x + VIS.w / 2, VIS.y + 70, { size: 56, color: C.amber });
+};
+
+V.pendulum = (t, p) => {
+  const px = VIS.x + VIS.w / 2, py = VIS.y + 80, L = p.length || 560, A = (p.amp || 35) * Math.PI / 180, T0 = p.period || 2.2;
+  const th = (s) => A * Math.cos(2 * Math.PI * s / T0);
+  const pos = (s) => [px + L * Math.sin(th(s)), py + L * Math.cos(th(s))];
+  const trail = []; for (let s = Math.max(0, t - 0.6); s <= t; s += 0.02) trail.push(pos(s));
+  line(trail, C.cyan, 10, 0.25);
+  ctx.fillStyle = C.dim; ctx.fillRect(px - 120, py - 12, 240, 12);
+  const [bx, by] = pos(t); line([[px, py], [bx, by]], C.dim, 4); drawBall(bx, by, 46, C.amber);
+  if (p.formula) text(p.formula, VIS.x + VIS.w / 2, VIS.y + VIS.h - 40, { size: 56, color: C.ink, weight: "700" });
+};
+
+V.wave = (t, p) => {
+  // p.mode: "travel" | "interference" | "doppler" | "tunnel"
+  const cy = VIS.y + VIS.h / 2, x0 = VIS.x + 30, x1 = VIS.x + VIS.w - 30, A = p.amp || 120, k = (p.k || 2.4) * Math.PI / (x1 - x0) * 2, w = p.speed || 4;
+  const mode = p.mode || "travel";
+  if (mode === "doppler") {
+    const sx = VIS.x + 260 + t * 110, sy = cy;
+    for (let n = 0; n < 14; n++) { const born = n * 0.35; if (t < born) continue; const ex = VIS.x + 260 + born * 110, r = (t - born) * 340;
+      ctx.save(); ctx.globalAlpha = clamp(1 - r / 900) * 0.9; ctx.strokeStyle = C.cyan; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(ex, sy, r, 0, 7); ctx.stroke(); ctx.restore(); }
+    drawBall(sx, sy, 34, C.amber);
+    text("high pitch", VIS.x + VIS.w - 120, VIS.y + 70, { size: 34, color: C.pink }); text("low pitch", VIS.x + 120, VIS.y + 70, { size: 34, color: C.violet });
+    return;
+  }
+  const y = (x, ph = 0, a = A) => cy + a * Math.sin(k * (x - x0) - w * t + ph);
+  if (mode === "tunnel") {
+    const bx = VIS.x + VIS.w * 0.55; ctx.fillStyle = "rgba(169,139,255,0.25)"; ctx.fillRect(bx, VIS.y + 120, 60, VIS.h - 240);
+    const pts = []; for (let x = x0; x <= x1; x += 4) { const a = x < bx ? A : x < bx + 60 ? A * Math.exp(-(x - bx) / 22) : A * Math.exp(-60 / 22); pts.push([x, cy + a * Math.sin(k * (x - x0) - w * t)]); }
+    line(pts, C.cyan, 7); text("barrier", bx + 30, VIS.y + 90, { size: 32, color: C.violet }); return;
+  }
+  const grid = (yy) => line([[x0, yy], [x1, yy]], C.dim, 2, 0.3); grid(cy);
+  if (mode === "interference") {
+    const a = [], b = [], s = []; for (let x = x0; x <= x1; x += 4) { const y1 = y(x, 0, A / 2) - cy, y2 = y(x, p.phase ?? 0, A / 2) - cy; a.push([x, cy + y1 - 220]); b.push([x, cy + y2 - 220]); s.push([x, cy + 120 + y1 + y2]); }
+    line(a, C.cyan, 5, 0.8); line(b, C.pink, 5, 0.8); line(s, C.amber, 8); text("sum", x0, cy + 40, { size: 30, color: C.amber, align: "left" }); return;
+  }
+  const pts = []; for (let x = x0; x <= x1; x += 4) pts.push([x, y(x)]); line(pts, C.cyan, 8);
+};
+
+V.orbit = (t, p) => {
+  const cx = VIS.x + VIS.w / 2, cy = VIS.y + VIS.h / 2, R = p.radius || 300, w = p.speed || 0.9;
+  ctx.save(); ctx.strokeStyle = "rgba(154,166,200,0.25)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke(); ctx.restore();
+  const big = p.center || "star";
+  if (big === "blackhole") { glowCircle(cx, cy, 28, "#000", 60); ctx.save(); ctx.strokeStyle = C.violet; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, 34, 0, 7); ctx.stroke(); ctx.restore(); }
+  else glowCircle(cx, cy, big === "earth" ? 90 : 80, big === "earth" ? "#3f86ff" : C.amber, 60);
+  const a = t * w, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+  drawBall(x, y, 30, big === "earth" ? "#d8dce8" : C.cyan);
+  if (p.arrows !== false) { arrow(x, y, x - Math.sin(a) * 170, y + Math.cos(a) * 170, C.green); arrow(x, y, x - Math.cos(a) * 140, y - Math.sin(a) * 140, C.pink);
+    text("speed", VIS.x + 40, VIS.y + VIS.h - 80, { size: 30, color: C.green, align: "left" }); text("gravity", VIS.x + 40, VIS.y + VIS.h - 36, { size: 30, color: C.pink, align: "left" }); }
+};
+
+V.cannon = (t, p) => {
+  // Newton's cannonball: faster and faster shots until one never lands
+  const cx = VIS.x + VIS.w / 2, cy = VIS.y + VIS.h / 2 + 60, R = 250, GM = 1, r0 = 1.18, vs = p.speeds || [0.5, 0.7, 0.85, 0.92];
+  glowCircle(cx, cy, R, "#2f6fe0", 40); text("Earth", cx, cy, { size: 42, color: "#dbe6ff" });
+  const sc = R; // 1 unit = R px
+  vs.forEach((v, i) => {
+    const start = i * 1.6; if (t < start) return;
+    let x = 0, y = -r0, vx = v, vy = 0; const pts = [[cx, cy - r0 * sc]]; const dt = 0.01, tl = Math.min(t - start, 1.6 * (i === vs.length - 1 ? 3 : 1)) * 4;
+    for (let s = 0; s < tl; s += dt) { const r = Math.hypot(x, y); if (r < 1) break; const ax = -GM * x / r ** 3, ay = -GM * y / r ** 3; vx += ax * dt; vy += ay * dt; x += vx * dt; y += vy * dt; pts.push([cx + x * sc, cy + y * sc]); }
+    const colors = [C.dim, C.violet, C.pink, C.amber];
+    line(pts, colors[i % 4], 5, 0.9); const [ex, ey] = pts[pts.length - 1]; drawBall(ex, ey, 14, colors[i % 4]);
+  });
+  ctx.fillStyle = C.ink; roundRect(cx - 30, cy - r0 * sc - 22, 60, 30, 8); ctx.fill();
+};
+
+V.particles = (t, p) => {
+  // p.mode "gas" | "hot-cold" | "lattice" | "drift"
+  const mode = p.mode || "gas";
+  const box = (bx, by, bw, bh, n, speed, color, seed) => {
+    ctx.save(); ctx.strokeStyle = C.dim; ctx.lineWidth = 4; ctx.strokeRect(bx, by, bw, bh); ctx.restore();
+    const r = rng(seed);
+    for (let i = 0; i < n; i++) {
+      const x0 = r() * bw, y0 = r() * bh, a = r() * 6.283, v = speed * (0.6 + r() * 0.8);
+      const fx = (x0 + Math.cos(a) * v * t) % (2 * bw), fy = (y0 + Math.sin(a) * v * t) % (2 * bh);
+      const px = Math.abs(fx < 0 ? fx + 2 * bw : fx), py = Math.abs(fy < 0 ? fy + 2 * bh : fy);
+      const X = px > bw ? 2 * bw - px : px, Y = py > bh ? 2 * bh - py : py;
+      glowCircle(bx + clamp(X, 12, bw - 12), by + clamp(Y, 12, bh - 12), 12, color, 14);
+    }
+  };
+  if (mode === "hot-cold") {
+    const bw = VIS.w / 2 - 40; box(VIS.x + 20, VIS.y + 100, bw, VIS.h - 200, 28, 90, C.cyan, 3); box(VIS.x + VIS.w / 2 + 20, VIS.y + 100, bw, VIS.h - 200, 28, 520, C.pink, 5);
+    text(p.labelA || "cold", VIS.x + 20 + bw / 2, VIS.y + 60, { size: 36, color: C.cyan }); text(p.labelB || "hot", VIS.x + VIS.w / 2 + 20 + bw / 2, VIS.y + 60, { size: 36, color: C.pink }); return;
+  }
+  if (mode === "lattice") {
+    const k = ease(t / Math.max(1, p.form || 3)), r = rng(11), cols = 7, rows = 6;
+    for (let i = 0; i < cols * rows; i++) {
+      const gx = i % cols, gy = Math.floor(i / cols);
+      const hx = VIS.x + 140 + gx * 115 + (gy % 2) * 57, hy = VIS.y + 160 + gy * 105;
+      const lx = VIS.x + 120 + r() * (VIS.w - 240) + Math.sin(t * 3 + i) * 14, ly = VIS.y + 300 + r() * (VIS.h - 400) + Math.cos(t * 3 + i) * 14;
+      glowCircle(lerp(lx, hx, k), lerp(ly, hy, k), 16, k > 0.9 ? C.cyan : C.ink, 12);
+    }
+    text(k > 0.9 ? (p.labelB || "ice: open hexagons") : (p.labelA || "water: packed tight"), VIS.x + VIS.w / 2, VIS.y + 60, { size: 38, color: k > 0.9 ? C.cyan : C.ink }); return;
+  }
+  box(VIS.x + 40, VIS.y + 80, VIS.w - 80, VIS.h - 160, p.n || 40, p.speed || 300, C.cyan, 9);
+};
+
+V.rays = (t, p) => {
+  // p.mode "refract" | "prism" | "scatter"
+  const mode = p.mode || "refract", k = easeOut(t / 1.6);
+  if (mode === "prism") {
+    const cx = VIS.x + VIS.w / 2, cy = VIS.y + VIS.h / 2 + 40;
+    ctx.save(); ctx.fillStyle = "rgba(200,220,255,0.15)"; ctx.strokeStyle = "rgba(220,230,255,0.7)"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(cx, cy - 220); ctx.lineTo(cx - 200, cy + 150); ctx.lineTo(cx + 200, cy + 150); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    const inX = cx - 100, inY = cy - 35; line([[VIS.x, cy - 140], [lerp(VIS.x, inX, clamp(k * 2)), lerp(cy - 140, inY, clamp(k * 2))]], "#ffffff", 9);
+    const cols = ["#ff4d4d", "#ff9a3d", "#ffe14d", "#52e38a", "#3fa9ff", "#8b6bff"];
+    if (k > 0.5) cols.forEach((c, i) => { const kk = clamp((k - 0.5) * 2); const outX = cx + 100, outY = cy - 35 + i * 8;
+      line([[inX, inY], [outX, outY]], c, 4, 0.7); line([[outX, outY], [lerp(outX, VIS.x + VIS.w, kk), lerp(outY, outY + 60 + i * 55, kk)]], c, 8); });
+    return;
+  }
+  if (mode === "scatter") {
+    const cy = VIS.y + VIS.h / 2, r = rng(4);
+    for (let i = 0; i < 30; i++) glowCircle(VIS.x + 120 + r() * (VIS.w - 240), VIS.y + 120 + r() * (VIS.h - 240), 8, C.dim, 6);
+    const reach = lerp(VIS.x, VIS.x + VIS.w, clamp(t / 2));
+    line([[VIS.x, cy + 60], [reach, cy + 60]], "#ff5c5c", 8); text("red passes through", VIS.x + 30, cy + 120, { size: 30, color: "#ff8a8a", align: "left" });
+    for (let i = 0; i < 8; i++) { const b = rng(30 + i); const sx = VIS.x + 150 + b() * (VIS.w - 300), sy = VIS.y + 150 + b() * (VIS.h - 300), a = b() * 6.283, s = clamp((t - 0.6 - i * 0.12) / 0.8);
+      if (s > 0) arrow(sx, sy, sx + Math.cos(a) * 140 * s, sy + Math.sin(a) * 140 * s, C.cyan, 6, 20); }
+    text("blue scatters everywhere", VIS.x + 30, VIS.y + 50, { size: 30, color: C.cyan, align: "left" }); return;
+  }
+  const sy = VIS.y + VIS.h * 0.45, cx = VIS.x + VIS.w / 2, n = p.n || 1.33, th1 = (p.angle || 45) * Math.PI / 180, th2 = Math.asin(Math.sin(th1) / n);
+  ctx.fillStyle = "rgba(63,160,255,0.18)"; ctx.fillRect(VIS.x, sy, VIS.w, VIS.y + VIS.h - sy);
+  line([[cx, VIS.y + 60], [cx, VIS.y + VIS.h - 60]], C.dim, 2, 0.5);
+  const L1 = 420, sx = cx - Math.sin(th1) * L1, syy = sy - Math.cos(th1) * L1, L2 = 460;
+  line([[sx, syy], [lerp(sx, cx, clamp(k * 2)), lerp(syy, sy, clamp(k * 2))]], C.amber, 9);
+  if (k > 0.5) { const kk = clamp((k - 0.5) * 2); line([[cx, sy], [cx + Math.sin(th2) * L2 * kk, sy + Math.cos(th2) * L2 * kk]], C.amber, 9);
+    line([[cx, sy], [cx + Math.sin(th1) * L2 * kk, sy + Math.cos(th1) * L2 * kk]], C.dim, 3, 0.5); }
+  text(p.labelTop || "air", VIS.x + 30, sy - 40, { size: 32, color: C.dim, align: "left" }); text(p.labelBottom || "water", VIS.x + 30, sy + 50, { size: 32, color: C.cyan, align: "left" });
+};
+
+V.spring = (t, p) => {
+  const ax = VIS.x + VIS.w / 2, ay = VIS.y + 60, rest = 380, A = p.amp || 160, w = 2 * Math.PI / (p.period || 1.6);
+  const yb = ay + rest + A * Math.cos(w * t), pts = [[ax, ay]];
+  for (let i = 1; i < 24; i++) pts.push([ax + (i % 2 ? 60 : -60), ay + (yb - ay - 60) * i / 24]);
+  pts.push([ax, yb - 60]); ctx.fillStyle = C.dim; ctx.fillRect(ax - 140, ay - 14, 280, 14); line(pts, C.cyan, 6);
+  ctx.fillStyle = C.amber; roundRect(ax - 80, yb - 60, 160, 120, 16); ctx.fill();
+};
+
+V.bars = (t, p) => {
+  // p.items: [{label, value, unit?, color?}], p.log: use log scale for wild ranges
+  const items = p.items || [], max = Math.max(...items.map((d) => p.log ? Math.log10(d.value + 1) : d.value));
+  const bh = Math.min(110, (VIS.h - 120) / items.length - 30), top = VIS.y + (VIS.h - items.length * (bh + 30)) / 2;
+  items.forEach((d, i) => {
+    const k = easeOut((t - 0.3 - i * 0.35) / 1.2), y = top + i * (bh + 30), v = p.log ? Math.log10(d.value + 1) : d.value, w = (VIS.w - 60) * (v / max) * k;
+    text(d.label, VIS.x + 30, y - 4, { size: 36, align: "left", base: "bottom", color: C.ink });
+    ctx.fillStyle = d.color ? (C[d.color] || d.color) : [C.cyan, C.amber, C.pink, C.green, C.violet][i % 5];
+    roundRect(VIS.x + 30, y + 6, Math.max(8, w), bh - 12, 12); ctx.fill();
+    if (k > 0.05) text(d.display || (d.value.toLocaleString("en-US") + (d.unit ? " " + d.unit : "")), VIS.x + 30 + Math.max(8, w) + 18, y + bh / 2, { size: 38, align: "left", alpha: k, color: C.ink });
+  });
+};
+
+V.formula = (t, p) => {
+  const k = easeOut(t / 0.8), cy = VIS.y + VIS.h / 2;
+  ctx.save(); ctx.globalAlpha = k; ctx.shadowColor = C.cyan; ctx.shadowBlur = 40; ctx.restore();
+  text(p.text || "", VIS.x + VIS.w / 2, cy - 30 + (1 - k) * 40, { size: p.size || 120, color: C.ink, alpha: k });
+  if (p.sub) text(p.sub, VIS.x + VIS.w / 2, cy + 110, { size: 44, color: C.amber, alpha: clamp((t - 0.6) / 0.6) });
+};
+
+V.none = () => {};
+
+// ---------------------------------------------------------------- frame chrome & captions
+function background(t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, C.bg2); g.addColorStop(1, C.bg1);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 2; const off = (t * 12) % 60;
+  for (let x = -60 + off; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = -60 + off; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+}
+function chrome(t, total, spec) {
+  ctx.fillStyle = "rgba(255,255,255,0.15)"; roundRect(60, 70, W - 120, 12, 6); ctx.fill();
+  ctx.fillStyle = C.amber; roundRect(60, 70, (W - 120) * clamp(t / total), 12, 6); ctx.fill();
+  text(spec.handle || "@Insightloopin", 60, 140, { size: 38, color: C.ink, align: "left" });
+  const tag = `PHYSICS IN ${Math.round(total)}s · DAY ${spec.day}`;
+  ctx.font = `700 30px ${FONT}`; const tw = ctx.measureText(tag).width + 40;
+  ctx.fillStyle = "rgba(63,208,255,0.16)"; roundRect(W - 60 - tw, 112, tw, 56, 28); ctx.fill();
+  text(tag, W - 60 - tw / 2, 141, { size: 30, color: C.cyan });
+}
+function wrap(words, maxW, size) {
+  ctx.font = `800 ${size}px ${FONT}`; const lines = [[]];
+  for (const w of words) { const cur = lines[lines.length - 1]; const test = [...cur, w].map((x) => x.t).join(" ");
+    if (cur.length && ctx.measureText(test).width > maxW) lines.push([w]); else cur.push(w); }
+  return lines;
+}
+function captions(scene, t) {
+  // words appear one by one over the first 45% of the scene; highlighted words are amber
+  const norm = (w) => w.toLowerCase().replace(/[^a-z0-9°%²]/gi, "");
+  const hl = new Set((scene.highlight || []).map(norm));
+  const words = scene.text.split(/\s+/).map((w) => ({ t: w, hi: hl.has(norm(w)) }));
+  const size = scene.big ? 84 : 70, lines = wrap(words, W - 160, size), lh = size * 1.22;
+  const shown = Math.ceil(words.length * clamp(t / Math.max(0.6, scene.dur * 0.45)));
+  const y0 = 1300 - (lines.length - 1) * lh / 2;
+  let litLines = 0, cum = 0; for (const ln of lines) { if (cum < shown) litLines++; cum += ln.length; }   // box grows line by line
+  ctx.save(); ctx.fillStyle = "rgba(5,8,20,0.55)"; roundRect(50, y0 - lh / 2 - 26, W - 100, Math.max(1, litLines) * lh + 52, 28); ctx.fill(); ctx.restore();
+  let idx = 0;
+  lines.forEach((ln, li) => {
+    ctx.font = `800 ${size}px ${FONT}`; const full = ln.map((w) => w.t).join(" "); let x = W / 2 - ctx.measureText(full).width / 2;
+    for (const w of ln) {
+      const ww = ctx.measureText(w.t + " ").width, vis = idx < shown, age = vis ? clamp((t - (idx / words.length) * scene.dur * 0.45) / 0.18) : 0;
+      if (vis) { ctx.save(); ctx.globalAlpha = age; const s = 0.85 + 0.15 * age; ctx.translate(x, y0 + li * lh); ctx.scale(s, s);
+        ctx.fillStyle = w.hi ? C.amber : C.ink; ctx.lineWidth = 10; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+        ctx.strokeText(w.t, 0, 0); ctx.fillText(w.t, 0, 0); ctx.restore(); }
+      x += ww; idx++;
+    }
+  });
+}
+
+// ---------------------------------------------------------------- public API
+let SPEC = null, STARTS = [], TOTAL = 0;
+function load(spec) {
+  SPEC = spec; STARTS = []; TOTAL = 0;
+  for (const s of spec.scenes) { STARTS.push(TOTAL); TOTAL += s.dur; }
+  return { duration: TOTAL, fps: spec.fps || 30 };
+}
+function frame(t) {
+  background(t);
+  let i = STARTS.findIndex((s, k) => t >= s && t < s + SPEC.scenes[k].dur); if (i < 0) i = SPEC.scenes.length - 1;
+  const sc = SPEC.scenes[i], lt = t - STARTS[i];
+  const fadeIn = i === 0 ? 1 : clamp(lt / 0.25);
+  ctx.save(); ctx.globalAlpha = fadeIn; (V[sc.visual?.type] || V.none)(lt, sc.visual || {}, sc.dur); ctx.restore();
+  captions(sc, lt);
+  chrome(t, TOTAL, SPEC);
+}
+window.reel = { load, frame, canvas: document.getElementById("c") };
+
+// live preview: engine.html?spec=reels/day-001.json
+const q = new URLSearchParams(location.search).get("spec");
+if (q) fetch(q).then((r) => r.json()).then((s) => { const { duration } = load(s); const t0 = performance.now();
+  const tick = () => { frame(((performance.now() - t0) / 1000) % duration); requestAnimationFrame(tick); }; tick(); });
+</script>
+</body>
+</html>
