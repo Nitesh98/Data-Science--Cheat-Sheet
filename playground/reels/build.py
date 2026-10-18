@@ -64,7 +64,7 @@ def main():
         print("3/4  encoding MP4")
         mp4 = out / f"{opts.reel}.mp4"
         subprocess.run([ff, "-y", "-loglevel", "error", "-framerate", "30", "-i", str(work / "f%05d.png"),
-                        "-i", str(work / "sfx.wav"), "-c:v", "libx264", "-preset", "slow", "-crf", "17",
+                        "-i", str(work / "sfx.wav"), "-c:v", "libx264", "-preset", "medium", "-crf", "22",
                         "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.1", "-r", "30",
                         "-c:a", "aac", "-b:a", "192k", "-t", str(meta["duration"]), "-movflags", "+faststart", str(mp4)],
                        check=True)
