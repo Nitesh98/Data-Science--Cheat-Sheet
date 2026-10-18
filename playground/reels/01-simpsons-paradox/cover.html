@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cover · 01 Simpson's paradox</title>
+<link rel="stylesheet" href="../engine/stage.css">
+<style>
+  .big { font-size: 190px; line-height: .92; }
+  .stat { display: inline-block; padding: 22px 34px; border-radius: 99px; font: 700 34px/1 "JetBrains Mono", monospace; letter-spacing: .03em; text-transform: uppercase; background: rgba(10,8,24,.72); }
+</style></head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="540" height="960"></canvas>
+  <div id="cam">
+    <div id="chip" class="abs" style="top:318px"><span class="chip mono">Simpson&rsquo;s paradox</span></div>
+    <div id="l1" class="abs display big" style="top:410px">YOUR DATA</div>
+    <div id="l2" class="abs display big" style="top:612px">IS <span id="ly" class="hot">LYING</span></div>
+    <svg class="abs" style="top:0;left:0" width="1080" height="1920" viewBox="0 0 1080 1920">
+      <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <g id="art" transform="translate(0 290)"></g>
+    </svg>
+    <div id="s1" class="abs" style="top:1545px;left:0;width:1080px"></div>
+  </div>
+  <div id="vignette"></div><canvas id="grain" width="1080" height="1920"></canvas>
+</div>
+<script src="../engine/motion.js"></script><script src="data.js"></script>
+<script>
+(() => {
+  const D = DATA, NS = "http://www.w3.org/2000/svg", art = document.getElementById("art");
+  const el = (tag, a) => { const n = document.createElementNS(NS, tag); for (const k in a) n.setAttribute(k, a[k]); art.appendChild(n); return n; };
+  const pos = (f, x) => [D.X(x), D.Y(f.m * x + f.b)];
+  D.pts.forEach(p => el("circle", { cx: D.X(p.x), cy: D.Y(p.y), r: 14, fill: p.g ? "#38E1FF" : "#9A7CFF", opacity: .95 }));
+  const [a1, a2] = [pos(D.all, 0.4), pos(D.all, 9.7)];
+  el("line", { x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1], stroke: "#FF4D6D", "stroke-width": 16, "stroke-linecap": "round", filter: "url(#glow)" });
+  D.g.forEach((f, i) => { const [p, q] = [pos(f, f.xmin - 0.2), pos(f, f.xmax + 0.2)];
+    el("line", { x1: p[0], y1: p[1], x2: q[0], y2: q[1], stroke: i ? "#38E1FF" : "#9A7CFF", "stroke-width": 16, "stroke-linecap": "round", filter: "url(#glow)" }); });
+  const up = (D.g[0].m + D.g[1].m) / 2;
+  document.getElementById("s1").innerHTML =
+    `<span class="stat hot" style="border:3px solid #FF4D6D;margin-right:18px">Average ▼ ${M.fmt(D.all.m)}</span>` +
+    `<span class="stat good" style="border:3px solid #B6FF3C">Every region ▲ ${M.fmt(up)}</span>`;
+  document.getElementById("s1").style.textAlign = "center";
+  M.boot({ duration: 1, mood: [{ t: 0, c: ["#6A4CFF", "#FF3D8B", "#1FB8FF"] }], render: () => {
+    document.getElementById("ly").style.textShadow = "10px 0 #00F0FF, -10px 0 #FF2DA0";
+  } });
+})();
+</script>
+</body></html>

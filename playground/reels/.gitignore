@@ -1,0 +1,5 @@
+# Generated output: rebuild with build.py. Videos are large and not meant for git.
+*/out/*.mp4
+*/out/contact-sheet.png
+__pycache__/
+*.pyc

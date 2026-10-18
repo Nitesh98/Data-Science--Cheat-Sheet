@@ -1,0 +1,40 @@
+/* Shared look for every reel: 1080x1920 canvas, fonts, colour tokens, text styles. */
+@font-face { font-family: "Space Grotesk"; font-weight: 700; src: url(fonts/space-grotesk-latin-700-normal.woff2); }
+@font-face { font-family: "Space Grotesk"; font-weight: 500; src: url(fonts/space-grotesk-latin-500-normal.woff2); }
+@font-face { font-family: "Inter"; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url(fonts/inter-latin-500-normal.woff2); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url(fonts/jetbrains-mono-latin-700-normal.woff2); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url(fonts/jetbrains-mono-latin-500-normal.woff2); }
+
+:root {
+  --ink: #090912; --paper: #F4F3FF; --dim: #9B98B8;
+  --lie: #FF4D6D; --truth: #B6FF3C; --violet: #9A7CFF; --cyan: #38E1FF; --amber: #FFC247;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #000; overflow: hidden; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--ink);
+  color: var(--paper); font-family: Inter, sans-serif; }
+canvas { position: absolute; left: 0; top: 0; }
+#bg { width: 1080px; height: 1920px; }
+#grain { mix-blend-mode: overlay; pointer-events: none; z-index: 50; }
+#cam { position: absolute; inset: 0; }
+
+/* every animated layer: full-width, centred text, animated through transform only */
+.abs { position: absolute; left: 0; width: 1080px; text-align: center; transform-origin: 50% 50%; will-change: transform, opacity; }
+.w, .ch { display: inline-block; transform-origin: 50% 60%; will-change: transform, opacity; }
+
+.display { font: 700 150px/0.95 "Space Grotesk", sans-serif; letter-spacing: -0.045em; text-transform: uppercase; }
+.title { font: 700 66px/1.12 "Space Grotesk", sans-serif; letter-spacing: -0.02em; }
+.body { font: 500 52px/1.25 Inter, sans-serif; letter-spacing: -0.01em; color: #D9D6F2; }
+.mono { font: 700 32px/1 "JetBrains Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+.hot { color: var(--lie); } .good { color: var(--truth); } .vio { color: var(--violet); } .cy { color: var(--cyan); } .am { color: var(--amber); }
+
+#chip { top: 232px; }
+.chip { display: inline-block; padding: 14px 28px; border-radius: 99px; border: 2px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.07); backdrop-filter: blur(6px); }
+#prog { position: absolute; left: 90px; top: 150px; width: 900px; height: 7px; border-radius: 9px; background: rgba(255,255,255,.14); z-index: 40; overflow: hidden; }
+#prog-fill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--violet), var(--cyan)); transform-origin: 0 50%; transform: scaleX(0); border-radius: 9px; }
+#wipe { position: absolute; top: -300px; left: 0; width: 1700px; height: 2520px; z-index: 45; transform-origin: 50% 50%;
+  background: linear-gradient(100deg, #9A7CFF 0%, #38E1FF 100%); opacity: 0; }
+#vignette { position: absolute; inset: 0; z-index: 30; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }

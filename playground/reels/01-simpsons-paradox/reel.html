@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reel 01 · Simpson's paradox</title>
+<link rel="stylesheet" href="../engine/stage.css">
+<style>
+  .hudnum { font: 700 165px/1 "Space Grotesk", sans-serif; letter-spacing: -0.05em; white-space: nowrap; }
+  .hudlab { margin-bottom: 14px; }
+  .cap { font-size: 68px; top: 1385px; left: 70px; width: 940px; }
+  .cap .w { margin: 0 9px; }
+  #hook, #chartScene, #explain, #cta { position: absolute; inset: 0; }
+  .glow { filter: drop-shadow(0 0 22px rgba(255,194,71,.65)); }
+  .pill { display: inline-block; padding: 26px 44px; border-radius: 99px; font: 700 36px/1 "JetBrains Mono", monospace;
+    letter-spacing: .04em; text-transform: uppercase; }
+  .pill.a { background: var(--paper); color: #14112a; } .pill.b { border: 3px solid rgba(255,255,255,.4); background: rgba(255,255,255,.08); }
+  .pill svg { vertical-align: -6px; margin-right: 14px; }
+  #eTitle { top: 560px; height: 330px; }
+  #eTitle .display { position: relative; }
+  #e1, #e2 { top: 1235px; font-size: 62px; }
+</style></head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="540" height="960"></canvas>
+  <div id="cam">
+    <div id="prog"><div id="prog-fill"></div></div>
+    <div id="chip" class="abs"><span class="chip mono">Data tricks &middot; 01</span></div>
+
+    <!-- 1. HOOK -->
+    <div id="hook">
+      <div id="hA" class="abs display" style="top:700px"><span class="w">YOUR</span> <span class="w">DATA</span></div>
+      <div id="hB" class="abs display" style="top:875px"><span class="w">IS</span> <span id="lying" class="w hot">LYING</span></div>
+      <svg id="spark" class="abs" style="top:1280px;left:0" width="1080" height="300" viewBox="0 0 1080 300">
+        <path id="spC" fill="none" stroke="#00F0FF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" opacity=".8"/>
+        <path id="spM" fill="none" stroke="#FF2DA0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" opacity=".8"/>
+        <path id="spW" fill="none" stroke="#F4F3FF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1"/>
+      </svg>
+      <div id="hS" class="abs body" style="top:1120px">&hellip;and your dashboard can&rsquo;t tell.</div>
+    </div>
+
+    <!-- 2. THE CHART -->
+    <div id="chartScene">
+      <div id="hud1" class="abs"><div class="mono hot hudlab" style="top:0">Overall trend</div><div id="hud1n" class="hudnum hot"></div></div>
+      <div id="hud2" class="abs">
+        <div style="position:absolute;left:0;width:540px"><div class="mono vio hudlab">Metro</div><div id="hud2a" class="hudnum vio" style="font-size:112px"></div></div>
+        <div style="position:absolute;left:540px;width:540px"><div class="mono cy hudlab">Tier-2</div><div id="hud2b" class="hudnum cy" style="font-size:112px"></div></div>
+      </div>
+      <svg id="chart" class="abs" style="top:0;left:0" width="1080" height="1920" viewBox="0 0 1080 1920">
+        <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <g id="grid"></g><g id="axes"></g><g id="dots"></g><g id="lines"></g><g id="labels"></g>
+      </svg>
+      <div id="c1" class="abs title cap"><span class="w">40</span><span class="w">campaigns.</span><span class="w am">Does</span><span class="w am">more</span><span class="w am">ad</span><span class="w am">spend</span><span class="w am">mean</span><span class="w am">more</span><span class="w am">sales?</span></div>
+      <div id="c2" class="abs title cap"><span class="w">More</span><span class="w">spend</span><span class="w">&rarr;</span><span class="w hot" id="fewer">FEWER</span><span class="w">sales?!</span></div>
+      <div id="c3" class="abs title cap"><span class="w">Wait&hellip;</span><span class="w">split</span><span class="w">by</span><span class="w vio">region.</span></div>
+      <div id="c4" class="abs title cap"><span class="w">Inside</span><span class="w am">EVERY</span><span class="w">region,</span><span class="w">more</span><span class="w">spend</span><span class="w">&rarr;</span><span class="w good">MORE</span><span class="w">sales.</span></div>
+    </div>
+
+    <!-- 3. THE EXPLANATION -->
+    <div id="explain">
+      <div id="eTitle" class="abs"><div id="eT1" class="display" style="position:absolute;left:0;width:1080px;top:0"></div><div id="eT2" class="display" style="position:absolute;left:0;width:1080px;top:170px"></div></div>
+      <div id="eSub" class="abs body" style="top:990px">a trend that <span class="hot" style="font-weight:800">reverses</span><br>when you split the groups</div>
+      <svg id="dia" class="abs" style="top:0;left:0" width="1080" height="1920" viewBox="0 0 1080 1920"></svg>
+      <div id="e1" class="abs title"><span class="am">Region</span> drives <b>both</b><br>spend <i>and</i> sales.</div>
+      <div id="e2" class="abs title">Ignore it, and you cut the<br>budget that was <span class="good">working</span>.</div>
+    </div>
+
+    <!-- 4. CALL TO ACTION -->
+    <div id="cta">
+      <div id="ctaA" class="abs body" style="top:520px;font-size:60px">Before you trust a trend, ask:</div>
+      <div id="k1" class="abs display" style="top:640px;font-size:132px">WHAT&rsquo;S</div>
+      <div id="k2" class="abs display am" style="top:775px;font-size:132px"><span class="glow">HIDING</span></div>
+      <div id="k3" class="abs display" style="top:910px;font-size:132px">IN THE</div>
+      <div id="k4" class="abs display" style="top:1045px;font-size:132px">AVERAGE?</div>
+      <div id="p1" class="abs" style="top:1265px"><span class="pill a"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M15 4v22M4 15h22" stroke="#14112a" stroke-width="5" stroke-linecap="round"/></svg>Follow &middot; daily data tricks</span></div>
+      <div id="p2" class="abs" style="top:1385px"><span class="pill b"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M3 3h20v24l-10-7-10 7z" fill="none" stroke="#F4F3FF" stroke-width="4" stroke-linejoin="round"/></svg>Save &middot; for your next review</span></div>
+    </div>
+  </div>
+  <div id="wipe"></div><div id="vignette"></div><canvas id="grain" width="1080" height="1920"></canvas>
+</div>
+<script src="../engine/motion.js"></script>
+<script src="data.js"></script>
+<script src="reel.js"></script>
+</body></html>
