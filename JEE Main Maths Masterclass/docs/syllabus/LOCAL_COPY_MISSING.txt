@@ -1,0 +1,6 @@
+The official PDF "Syllabus for JEE(Main) -2026" could not be downloaded on 2026-10-18 because the
+production container's network policy blocks cdnbbsr.s3waas.gov.in and jeemain.nta.nic.in.
+
+Please save it here as: JEE_Main_2026_Syllabus_official.pdf
+URL: https://cdnbbsr.s3waas.gov.in/s3f8e59f4b2fe7c5705bf878bbd494ccdf/uploads/2025/10/202510311323551056.pdf
+Then follow "Action needed by a human" in SOURCE.md.

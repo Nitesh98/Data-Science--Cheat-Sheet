@@ -1,0 +1,4 @@
+renders/
+production/media/
+__pycache__/
+*.pyc
