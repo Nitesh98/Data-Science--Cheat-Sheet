@@ -1,8 +1,11 @@
 """Production-wide configuration. Change values here, not inside scenes."""
 import os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROD = os.path.join(ROOT, "production")
+# The pipeline lives in the Maths project and is shared by the series: set
+# JEE_PROJECT to another subject's folder (e.g. "JEE Main Physics Masterclass")
+# and renders, timelines and the chapter list come from that project instead.
+PROD = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.environ.get("JEE_PROJECT") or os.path.dirname(PROD)
 RENDERS = os.path.join(ROOT, "renders")
 CACHE = os.path.join(RENDERS, "cache")
 
@@ -27,4 +30,13 @@ MUSIC_DB_UNDER_VOICE = -24.0   # music bed relative to narration while speaking
 MUSIC_DB_ALONE = -18.0         # music when nobody speaks (title cards, pauses)
 
 # --- chapter list for the progress indicator -----------------------------------
-CHAPTER_IDS = [f"C{i:02d}" for i in range(22)]
+def _chapter_ids():
+    import importlib.util
+    path = os.path.join(ROOT, "docs", "coverage_data.py")
+    spec = importlib.util.spec_from_file_location("coverage_data", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return list(mod.CHAPTERS)
+
+
+CHAPTER_IDS = _chapter_ids()

@@ -35,8 +35,9 @@ def detect(path, filt, key):
 def main(scene_file, scene, preview=False):
     env = dict(os.environ, JEE_PREVIEW="1" if preview else "0", PYTHONPATH=HERE)
     media = os.path.join(C.RENDERS, "media")
+    scene_path = scene_file if os.path.isabs(scene_file) else os.path.join(C.ROOT, "production", scene_file)
     run(["/opt/mvenv/bin/manim", "render", "--disable_caching", "--media_dir", media, "-o", scene,
-         os.path.join(HERE, scene_file), scene], env=env, cwd=HERE)
+         scene_path, scene], env=env, cwd=HERE)
     vids = sorted(glob.glob(os.path.join(media, "videos", "*", "*", scene + ".mp4")), key=os.path.getmtime)
     silent = vids[-1]
     tag = "preview" if preview else "4k"
