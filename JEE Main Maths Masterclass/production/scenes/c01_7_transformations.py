@@ -168,7 +168,9 @@ class C01_7_Transformations(NarratedScene):
                      T("inside x  →  horizontal, feels opposite", size=24, color=S.INPUT),
                      T("outside  →  vertical, exactly as written", size=24, color=S.OUTPUT)).arrange(DOWN, buff=0.18, aligned_edge=LEFT)
         body = VGroup(grid, tip).arrange(DOWN, buff=0.45, aligned_edge=LEFT)
-        S.fit(body, panel[0], pad=0.45).move_to(panel[0]).shift(DOWN * 0.2)
+        S.fit(body, Rectangle(width=PANEL_W - 0.9, height=panel[0].height - 1.5), pad=0)
+        body.move_to(panel[0]).shift(DOWN * 0.35)
+        self.play(FadeOut(self.note), run_time=0.3)
         boxes = VGroup(*[S.focus_box(mob, color=S.INPUT) for mob in inside])
         self.say("Rule of thumb याद रखो: | जो बदलाव x के अंदर होता है, वह horizontal होता है, और उल्टा लगता है। | जो बदलाव बाहर होता है, वह vertical है, और जैसा लिखा है वैसा ही।",
                  FadeIn(tip), *[Create(b) for b in boxes],
@@ -227,7 +229,7 @@ class C01_7_Transformations(NarratedScene):
         m1.shift(DOWN * 0.25); m1d.shift(DOWN * 0.25); m2.shift(DOWN * 0.55); m2d.shift(DOWN * 0.55)
         S.fit(body, panel[0]).move_to(panel[0]).shift(UP * 0.1)
         self.say("अब modulus वाले दो transformations, जिनमें students सबसे ज़्यादा confuse होते हैं। | Function लेते हैं x squared minus 4x plus 3, यानी x minus 1 times x minus 3.",
-                 Create(VGroup(left, arch, right)), FadeIn(lab), FadeIn(panel), run_time=2.5)
+                 Create(VGroup(left, arch, right)), FadeIn(panel), FadeIn(lab), run_time=2.5)
         neg = self.fplot(F, 1, 3, color=S.RESTRICT, width=7, dashed=True)
         self.say("1 और 3 के बीच outputs negative हैं। | यही हिस्सा बदलेगा।", FadeIn(neg), Write(m1), run_time=1.4)
         flipped = self.fplot(lambda X: -F(X), 1, 3, color=S.OUTPUT)
@@ -263,11 +265,12 @@ class C01_7_Transformations(NarratedScene):
         F = lambda X: X ** 2 - 4 * X + 3
         L, Rr = 2 - np.sqrt(7) + 0.02, 2 + np.sqrt(7) - 0.02
         g = VGroup(self.fplot(F, L, 1), self.fplot(lambda X: -F(X), 1, 3), self.fplot(F, 3, Rr))
-        lab = M(r"y=|x^2-4x+3|", size=34, color=S.OUTPUT).move_to(self.ax.c2p(-3.3, 5.3))
-        panel = self.right_panel(6.1, "WORKED EXAMPLE · original, JEE Main style")
+        lab = M(r"y=|x^2-4x+3|", size=34, color=S.OUTPUT).move_to(self.ax.c2p(-2.8, 3.2))
+        panel = self.right_panel(6.1, "WORKED EXAMPLE · original")
         q = VGroup(M(r"|x^2-4x+3| = k", size=42),
                    T("(i) For which k are there exactly 3 real solutions?", size=24),
                    T("(ii) For which k are there exactly 4?", size=24)).arrange(DOWN, buff=0.25, aligned_edge=LEFT)
+        S.fit(q, Rectangle(width=PANEL_W - 0.3, height=3), pad=0)
         q.move_to(panel[0]).align_to(panel[0], UP).shift(DOWN * 0.75)
         self.play(FadeIn(panel), Write(q[0]), FadeIn(q[1:]), run_time=1.5)
         self.say("अब एक exam-style question. | Mod of x squared minus 4x plus 3 equals k. | किस k के लिए exactly तीन real solutions हैं? और किस के लिए चार?",
@@ -279,7 +282,7 @@ class C01_7_Transformations(NarratedScene):
         cue.next_to(q, DOWN, buff=0.4).align_to(q, LEFT)
         S.fit(cue, Rectangle(width=PANEL_W - 0.3, height=2))
         self.say("Recognition cue: | modulus वाली equation में solutions गिनने हों, तो graph बनाओ, | और horizontal line y equals k कितनी बार काटती है, वो गिनो।",
-                 Create(g), FadeIn(lab), FadeIn(cue), run_time=2.4)
+                 Create(g), FadeIn(cue), run_time=2.4)
         kv = ValueTracker(-0.6)
 
         def roots(kk):
@@ -332,7 +335,7 @@ class C01_7_Transformations(NarratedScene):
         self.say("Total तीन distinct solutions. | Graph और algebra agree करते हैं।", Write(v[3]), run_time=1.2, sfx="accent")
         self.say("Answer: | part one में k equals 1, | part two में k zero और 1 के बीच, open interval.",
                  Write(v[4]), run_time=1.4, sfx="release", hold=1.5)
-        self.example_items = VGroup(g, lab, panel, q[0], v)
+        self.example_items = VGroup(g, panel, q[0], v)
         self.ex_line, self.ex_dots, self.ex_readout = line, dots, readout
 
     # 6. TRAP ---------------------------------------------------------------------
@@ -367,7 +370,7 @@ class C01_7_Transformations(NarratedScene):
         rtag = S.tag("ACTIVE RECALL", S.FOCUS).move_to(panel[0].get_corner(UL) + RIGHT * 1.25 + DOWN * 0.45)
         q = M(r"\text{Predict: } y = 2-|x-1|", size=42)
         hint = T("vertex? opens which way? range?", size=26, color=S.MUTED)
-        VGroup(q, hint).arrange(DOWN, buff=0.3, aligned_edge=LEFT).move_to(panel[0]).shift(UP * 1.2)
+        VGroup(q, hint).arrange(DOWN, buff=0.3, aligned_edge=LEFT).move_to(panel[0]).shift(UP * 1.6)
         self.say("अब तुम्हारी बारी। | Graph बनने से पहले predict करो: y equals 2 minus mod of x minus 1. | Vertex कहाँ है, graph किस तरफ खुलता है, और range क्या है?",
                  FadeIn(panel), FadeIn(rtag), Write(q), FadeIn(hint), run_time=2.0)
         self.think(7)
@@ -383,7 +386,7 @@ class C01_7_Transformations(NarratedScene):
             return VGroup(self.fplot(fn, max(lo, -6), 1 if fn is not steps[0][0] else 0, step=0.05),
                           self.fplot(fn, 1 if fn is not steps[0][0] else 0, hi, step=0.05))
         cur = piece(steps[0][0])
-        col = VGroup(*[s[1] for s in steps]).arrange(DOWN, buff=0.22, aligned_edge=LEFT).next_to(hint, DOWN, buff=0.45).align_to(hint, LEFT)
+        col = VGroup(*[s[1] for s in steps]).arrange(DOWN, buff=0.14, aligned_edge=LEFT).next_to(hint, DOWN, buff=0.35).align_to(hint, LEFT)
         self.say("Mod x के V से शुरू करो।", Create(cur), FadeIn(col[0]), run_time=1.2)
         for fn, lab in steps[1:]:
             nxt = piece(fn)
@@ -393,7 +396,7 @@ class C01_7_Transformations(NarratedScene):
         vtx = S.dot(self.ax, 1, 2, color=S.FOCUS)
         ans = VGroup(M(r"\text{vertex }(1,2),\ \text{opens down}", size=32, color=S.OK),
                      M(r"\text{range }(-\infty,2]", size=32, color=S.OK)).arrange(DOWN, buff=0.15, aligned_edge=LEFT)
-        ans.next_to(col, DOWN, buff=0.4).align_to(col, LEFT)
+        ans.next_to(col, DOWN, buff=0.3).align_to(col, LEFT)
         self.say("Right 1, फिर flip, फिर 2 ऊपर। | Vertex 1 comma 2, graph नीचे खुलता है, | और range minus infinity से 2 तक, 2 included.",
                  FadeIn(vtx), Write(ans), run_time=1.6, sfx="release", hold=1.0)
         self.play(FadeOut(VGroup(panel, rtag, q, hint, col, cur, vtx, ans)), run_time=0.8)
