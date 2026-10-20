@@ -8,6 +8,7 @@ and everything goes cinematic: letterbox bars, spotlights, capes, a sword, slow-
 The workers shrug and get back to work.
 
 - `scene.html`: the whole film. `window.film.frame(t)` draws second `t` (deterministic). Open `scene.html?play` to watch it live.
+- `score.js`: original synced music (synthesised in code, copyright-free); `--silent` skips it.
 - `render.js`: renders it to `out/main-character-factory.mp4` (1080x1920, 9:16, 30 fps, H.264).
 
 ```

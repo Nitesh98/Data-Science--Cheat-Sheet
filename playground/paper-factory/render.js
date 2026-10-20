@@ -1,7 +1,8 @@
 /*
  * Render scene.html to a 1080x1920 (9:16) MP4, frame by frame (deterministic, no dropped frames).
  *
- *   node render.js            -> out/main-character-factory.mp4 (silent, story reads without sound)
+ *   node render.js            -> out/main-character-factory.mp4 (with the original score from score.js)
+ *   node render.js --silent   -> same, without music
  *   node render.js --sheet    -> out/sheet.jpg only: a contact sheet of key moments, for checking
  *   node render.js --at 11.2  -> out/frame-11.2s.jpg only: one full-size frame
  *
@@ -13,7 +14,7 @@ const { chromium } = require("playwright");
 (async () => {
   const outDir = path.join(__dirname, "out"), arg = (f) => process.argv.includes(f);
   fs.mkdirSync(outDir, { recursive: true });
-  const launch = {};
+  const launch = { args: ["--autoplay-policy=no-user-gesture-required"] };
   if (fs.existsSync("/opt/pw-browsers/chromium")) launch.executablePath = "/opt/pw-browsers/chromium";
   const browser = await chromium.launch(launch);
   const page = await browser.newPage({ viewport: { width: 400, height: 700 } });
@@ -35,10 +36,13 @@ const { chromium } = require("playwright");
   }
 
   const { duration, fps } = await page.evaluate(() => ({ duration: window.film.duration, fps: window.film.fps }));
-  const outFile = path.join(outDir, "main-character-factory.mp4"), n = Math.round(duration * fps);
+  const outFile = path.join(outDir, "main-character-factory.mp4"), n = Math.round(duration * fps), music = !arg("--silent");
+  const audioFile = path.join(outDir, "score.webm"), videoFile = music ? path.join(outDir, "video-only.mp4") : outFile;
+  if (music) { console.log("composing score (records in real time)…");
+    fs.writeFileSync(audioFile, Buffer.from(await page.evaluate(async () => window.score.encode(await window.score.render())), "base64")); }
   const ff = spawn(process.env.FFMPEG || "ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps),
     "-c:v", "mjpeg", "-i", "pipe:0", "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
-    "-movflags", "+faststart", outFile], { stdio: ["pipe", "inherit", "inherit"] });
+    "-movflags", "+faststart", videoFile], { stdio: ["pipe", "inherit", "inherit"] });
   const done = new Promise((res, rej) => ff.on("close", (c) => (c === 0 ? res() : rej(new Error("ffmpeg exited " + c)))));
   process.stdout.write("rendering:");
   for (let i = 0; i < n; i++) {
@@ -47,5 +51,7 @@ const { chromium } = require("playwright");
     if (i % (fps * 2) === 0) process.stdout.write(` ${Math.round((100 * i) / n)}%`);
   }
   ff.stdin.end(); await done; await browser.close();
+  if (music) { require("child_process").execFileSync(process.env.FFMPEG || "ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", "-i", videoFile, "-i", audioFile,
+    "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", outFile]); fs.unlinkSync(videoFile); }
   console.log(` -> ${outFile}`);
 })().catch((e) => { console.error(e); process.exit(1); });
