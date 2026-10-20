@@ -1,0 +1,543 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Main Character Factory</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:360px;height:640px}</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/*
+ * "The Main Character Factory": a 20-second paper-cut animation, drawn entirely in code.
+ * window.film.frame(t) draws the frame at t seconds (deterministic). render.js captures frames.
+ * Open scene.html?play in a browser to watch it live.
+ */
+const W = 1080, H = 1920, DUR = 20;
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const FONT = '"Liberation Sans", "DejaVu Sans", Arial, sans-serif';
+
+// ---------------------------------------------------------------- palette (warm paper)
+const P = {
+  kraft: "#c9a173", kraftDark: "#a87f52", cream: "#f3e6cc", creamDark: "#e2cfa8", wall: "#d9b88a", wallDark: "#c19a6a",
+  beam: "#6b4a33", beamDark: "#4e3424", floor: "#a8714a", floorDark: "#8d5b3a", floorLine: "#7a4b2f",
+  mustard: "#e3a52f", mustardDark: "#c48a1f", terracotta: "#d0643c", terraDark: "#a94c2c", sage: "#8fae8b", sageDark: "#6f8f6c",
+  teal: "#3f8f8f", tealDark: "#2f6f70", coral: "#f08a6c", plum: "#7a4a6e", navy: "#34425f", rose: "#e7a3a0",
+  grey: "#a8a39a", greyDark: "#8a857c", greyLight: "#c2bdb3", skin: "#f1c6a0", skin2: "#d99a72", skin3: "#b8784f",
+  gold: "#ffcc4d", goldDeep: "#f2a516", ink: "#3b2a20", white: "#fffaf0", steel: "#9fb1bd", steelDark: "#7a8d99", glass: "rgba(214,236,240,0.55)",
+};
+
+// ---------------------------------------------------------------- deterministic helpers
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeIO = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const easeOut = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const easeIn = (x) => Math.pow(clamp(x), 3);
+const backOut = (x) => { x = clamp(x); const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const seg = (t, a, b) => clamp((t - a) / (b - a));               // 0..1 progress of t within [a, b]
+function key(t, kf, ease = easeIO) {                               // keyframes [[t, v], ...]
+  if (t <= kf[0][0]) return kf[0][1];
+  for (let i = 1; i < kf.length; i++) if (t <= kf[i][0]) return lerp(kf[i - 1][1], kf[i][1], ease(seg(t, kf[i - 1][0], kf[i][0])));
+  return kf[kf.length - 1][1];
+}
+function rng(seed) { let a = (Math.imul(seed + 1, 2654435761) ^ 0x9e3779b9) >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const hash = (n) => rng(n)();
+
+// ---------------------------------------------------------------- paper textures (one tinted pattern per colour)
+const TEX = new Map();
+function tex(color) {
+  if (!color.startsWith("#")) return color;
+  if (TEX.has(color)) return TEX.get(color);
+  const s = 256, c = document.createElement("canvas"); c.width = c.height = s; const g = c.getContext("2d");
+  g.fillStyle = color; g.fillRect(0, 0, s, s);
+  const img = g.getImageData(0, 0, s, s), d = img.data, r = rng(color.length * 977 + parseInt(color.slice(1), 16) % 9973);
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - 0.5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  g.putImageData(img, 0, 0);
+  g.globalAlpha = 0.08; g.lineWidth = 1;                          // paper fibres
+  for (let i = 0; i < 70; i++) { g.strokeStyle = r() < 0.5 ? "#ffffff" : "#000000"; g.beginPath();
+    const x = r() * s, y = r() * s, a = r() * 6.28, l = 6 + r() * 20; g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a + 1) * l / 2, y + Math.sin(a + 1) * l / 2, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  // an ImageBitmap source keeps pattern fills fast in software rendering (a canvas source is re-read on every fill)
+  const oc = new OffscreenCanvas(s, s); oc.getContext("2d").drawImage(c, 0, 0);
+  const pat = ctx.createPattern(oc.transferToImageBitmap(), "repeat"); TEX.set(color, pat); return pat;
+}
+
+// one paper layer: fill a path with textured paper and a cast shadow (depth = how far it lifts off the page)
+function paper(pathFn, color, depth = 1) {
+  ctx.save(); ctx.beginPath(); pathFn();
+  // shadow pass with a flat colour, then the texture on top: a blurred shadow under a pattern fill is very slow in software rendering
+  if (depth > 0) { ctx.save(); ctx.shadowColor = "rgba(58,32,14,0.38)"; ctx.shadowBlur = 4 + depth * 5; ctx.shadowOffsetX = depth * 2; ctx.shadowOffsetY = depth * 4;
+    ctx.fillStyle = color; ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = tex(color); ctx.fill(); ctx.restore();
+}
+function prect(x, y, w, h, color, depth = 1, r = 10, tilt = 0) {
+  paper(() => { if (tilt) { const cx = x + w / 2, cy = y + h / 2, c = Math.cos(tilt), s = Math.sin(tilt);
+    const pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([px, py]) => [cx + px * c - py * s, cy + px * s + py * c]);
+    ctx.moveTo(...pts[0]); pts.slice(1).forEach((p) => ctx.lineTo(...p)); ctx.closePath(); } else ctx.roundRect(x, y, w, h, r); }, color, depth);
+}
+function pcircle(x, y, r, color, depth = 1) { paper(() => ctx.arc(x, y, r, 0, Math.PI * 2), color, depth); }
+function poly(pts, color, depth = 1) { paper(() => { ctx.moveTo(...pts[0]); pts.slice(1).forEach((p) => ctx.lineTo(...p)); ctx.closePath(); }, color, depth); }
+// wobbly hand-cut blob around a centre
+function blob(cx, cy, rx, ry, color, depth = 1, seed = 1, wob = 0.08, n = 14) {
+  const r = rng(seed); const pts = [];
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, k = 1 + (r() - 0.5) * wob * 2; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+  paper(() => { ctx.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; ctx.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); } ctx.closePath(); }, color, depth);
+}
+function label(str, x, y, size, color = P.ink, rot = 0, weight = "900") {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.font = `${weight} ${size}px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = color; ctx.fillText(str, 0, 0); ctx.restore();
+}
+function glow(x, y, r, color, a = 1) {
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, color); g.addColorStop(1, "rgba(255,200,80,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+function star(x, y, r, color, rot = 0, depth = 0.5) {
+  const pts = []; for (let i = 0; i < 10; i++) { const a = rot + (i * Math.PI) / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]); }
+  poly(pts, color, depth);
+}
+function sparkle(x, y, r, a = 1) {           // four-point twinkle
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = "#fff3c4"; ctx.beginPath();
+  ctx.moveTo(x, y - r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.quadraticCurveTo(x, y, x, y + r); ctx.quadraticCurveTo(x, y, x - r, y); ctx.quadraticCurveTo(x, y, x, y - r); ctx.fill(); ctx.restore();
+}
+function shield(x, y, s, rot = 0, depth = 1) {  // a piece of "plot armor"
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  const path = () => { ctx.moveTo(0, -46); ctx.lineTo(36, -36); ctx.lineTo(34, 6); ctx.quadraticCurveTo(28, 34, 0, 50); ctx.quadraticCurveTo(-28, 34, -34, 6); ctx.lineTo(-36, -36); ctx.closePath(); };
+  paper(path, P.goldDeep, depth);
+  ctx.save(); ctx.scale(0.78, 0.78); paper(path, "#c9d6df", 0); ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.moveTo(-6, -30); ctx.lineTo(-20, -24); ctx.lineTo(-20, 0); ctx.lineTo(-6, 6); ctx.fill();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- characters
+// limb from (x,y): upper segment angle a1, lower a2 (radians, 0 = straight down, + = toward +x)
+function limb(x, y, a1, a2, l1, l2, w, color, hand = null) {
+  const ex = x + Math.sin(a1) * l1, ey = y + Math.cos(a1) * l1, hx = ex + Math.sin(a2) * l2, hy = ey + Math.cos(a2) * l2;
+  paper(() => { ctx.lineWidth = w; }, color, 0);
+  ctx.save(); ctx.shadowColor = "rgba(58,32,14,0.32)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+  ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.shadowColor = "rgba(0,0,0,0)"; ctx.strokeStyle = tex(color); ctx.stroke(); ctx.restore();
+  if (hand) pcircle(hx, hy, w * 0.62, hand, 0.6);
+  return [hx, hy];
+}
+function face(x, y, r, mood, look = 0) {
+  const ex = r * 0.36, ey = -r * 0.05, lx = look * r * 0.18;
+  ctx.save(); ctx.fillStyle = P.ink; ctx.strokeStyle = P.ink; ctx.lineCap = "round"; ctx.lineWidth = r * 0.09;
+  if (mood === "shades") {
+    ctx.fillStyle = "#1d1714"; ctx.beginPath(); ctx.roundRect(x - r * 0.75 + lx, y + ey - r * 0.2, r * 0.62, r * 0.34, r * 0.12); ctx.roundRect(x + r * 0.13 + lx, y + ey - r * 0.2, r * 0.62, r * 0.34, r * 0.12); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - r * 0.15 + lx, y + ey - r * 0.12); ctx.lineTo(x + r * 0.15 + lx, y + ey - r * 0.12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r * 0.25, y + r * 0.42); ctx.quadraticCurveTo(x + r * 0.05, y + r * 0.52, x + r * 0.3, y + r * 0.36); ctx.stroke();
+    ctx.restore(); return;
+  }
+  const eyeR = mood === "shock" ? r * 0.13 : r * 0.1;
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * ex + lx, y + ey, eyeR, 0, 7); ctx.fill(); }
+  const brow = { flat: 0, bored: 0.05, happy: -0.15, proud: 0.25, shock: -0.35, worry: -0.25, determined: 0.38, shrug: -0.3 }[mood] ?? 0;
+  for (const s of [-1, 1]) { ctx.beginPath(); const bx = x + s * ex + lx, by = y + ey - r * (mood === "shock" || mood === "shrug" ? 0.42 : 0.3);
+    ctx.moveTo(bx - r * 0.16, by + s * brow * r * 0.25 * (mood === "worry" ? -1 : 1)); ctx.lineTo(bx + r * 0.16, by - s * brow * r * 0.25 * (mood === "worry" ? -1 : 1)); ctx.stroke(); }
+  ctx.beginPath(); const my = y + r * 0.42;
+  if (mood === "shock") { ctx.arc(x, my + r * 0.04, r * 0.15, 0, 7); ctx.fill(); }
+  else if (mood === "happy" || mood === "proud") { ctx.arc(x, my - r * 0.12, r * 0.24, 0.2, Math.PI - 0.2); ctx.stroke(); }
+  else if (mood === "determined") { ctx.moveTo(x - r * 0.2, my); ctx.lineTo(x + r * 0.2, my - r * 0.06); ctx.stroke(); }
+  else if (mood === "shrug") { ctx.moveTo(x - r * 0.22, my + r * 0.02); ctx.quadraticCurveTo(x, my - r * 0.12, x + r * 0.22, my + r * 0.04); ctx.stroke(); }
+  else if (mood === "worry") { ctx.moveTo(x - r * 0.2, my + r * 0.06); ctx.quadraticCurveTo(x, my - r * 0.1, x + r * 0.2, my + r * 0.06); ctx.stroke(); }
+  else { ctx.moveTo(x - r * 0.18, my); ctx.lineTo(x + r * 0.18, my); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* An "ordinary person". o = {s scale, look, lean, glow 0..1 (golden aura + colour), mood, arms:[[a1,a2],[a1,a2]],
+   legs:[[a1,a2],[a1,a2]], palette, cape 0..1, wind, shades, sword, hair, crouch, flip} */
+const GREY = { shirt: P.grey, pants: P.greyDark, skin: P.greyLight, hair: P.greyDark, shoe: P.greyDark };
+function person(x, footY, o = {}) {
+  const s = o.s || 1, k = clamp(o.glow || 0), pal = o.palette || { shirt: P.coral, pants: P.navy, skin: P.skin, hair: P.ink, shoe: P.ink };
+  const col = (a, b) => (k >= 0.5 ? b : a);                       // paper is cut in one colour or the other
+  const c = { shirt: col(GREY.shirt, pal.shirt), pants: col(GREY.pants, pal.pants), skin: col(GREY.skin, pal.skin), hair: col(GREY.hair, pal.hair), shoe: col(GREY.shoe, pal.shoe) };
+  ctx.save(); ctx.translate(x, footY); ctx.scale(s * (o.flip ? -1 : 1), s);
+  const crouch = o.crouch || 0, slump = o.slump ?? (k < 0.5 ? 1 : 0);
+  const hipY = -78 + crouch * 30, shY = hipY - 78 + slump * 8, lean = o.lean || 0;
+  if (k > 0) glow(0, -110, 150, `rgba(255,204,77,${0.55 * k})`, 1);
+  // cape behind
+  if (o.cape) { const w = o.wind || 0, tt = o.t || 0;
+    const tip = (i) => [-40 - 70 * o.cape - Math.sin(tt * 9 + i) * 14 * w, hipY + 10 + i * 20 - 30 * w * o.cape];
+    poly([[-22, shY + 6], [22, shY + 6], tip(0), tip(1.6), [-30, hipY + 40]].map(([px, py], i) => i === 2 || i === 3 ? [px + (i - 2) * 30, py] : [px, py]), P.terracotta, 1.2);
+  }
+  ctx.rotate(lean);
+  const legs = o.legs || [[0.08, 0], [-0.08, 0]];
+  legs.forEach(([a1, a2], i) => limb((i ? 10 : -10), hipY, a1, a2, 42 - crouch * 6, 40 - crouch * 6, 20, c.pants, c.shoe));
+  const tilt = o.headTilt ?? (slump ? 0.12 : -0.05);
+  poly([[-26, shY], [26, shY], [22, hipY + 4], [-22, hipY + 4]], c.shirt, 1.4);    // torso
+  const arms = o.arms || (slump ? [[0.12, 0.05], [-0.12, -0.05]] : [[0.25, -0.4], [-0.25, 0.4]]);
+  const hands = arms.map(([a1, a2], i) => limb(i ? 24 : -24, shY + 8, a1, a2, 34, 32, 15, c.shirt, c.skin));
+  if (o.sword) { const [hx, hy] = hands[1]; ctx.save(); ctx.translate(hx, hy); ctx.rotate(o.sword);
+    prect(-6, -150, 12, 140, "#e8edf2", 1.2, 4); prect(-22, -14, 44, 10, P.goldDeep, 1, 3); ctx.restore();
+    glow(hx, hy - 90, 70, "rgba(255,240,180,0.8)", 0.8); }
+  // head
+  ctx.save(); ctx.translate(0, shY - 30); ctx.rotate(tilt);
+  pcircle(0, 0, 30, c.skin, 1.2);
+  const hw = o.wind ? Math.sin((o.t || 0) * 10) * 6 * o.wind : 0;
+  paper(() => { ctx.ellipse(o.hairFlip ? -6 : 0, -14, 32, 20, o.hairFlip ? -0.35 : 0, Math.PI, 0); ctx.lineTo(30, -8); ctx.quadraticCurveTo(-10 + hw, -24, -32 - 10 * (o.wind || 0), -2 + hw); ctx.closePath(); }, c.hair, 0.6);
+  face(2, 2, 30, o.shades ? "shades" : o.mood || (slump ? "bored" : "proud"), o.look || 0);
+  ctx.restore();
+  if (k > 0.5) { ctx.save(); ctx.globalAlpha = (k - 0.5) * 2; ctx.strokeStyle = P.gold; ctx.lineWidth = 4; ctx.setLineDash([2, 10]); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.ellipse(0, shY - 34, 36, 10, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  ctx.restore();
+}
+
+/* A tiny factory worker: hard hat, overalls. o = {s, flip, mood, arms, legs, walk (phase), carry, look, cheer} */
+function worker(x, footY, o = {}) {
+  const s = o.s || 0.78; ctx.save(); ctx.translate(x, footY); ctx.scale(s * (o.flip ? -1 : 1), s);
+  const wk = o.walk != null ? Math.sin(o.walk) * 0.45 : 0, bob = o.walk != null ? Math.abs(Math.cos(o.walk)) * 4 : 0;
+  ctx.translate(0, -bob);
+  const legs = o.legs || [[wk, 0], [-wk, 0]];
+  legs.forEach(([a1, a2], i) => limb(i ? 9 : -9, -56, a1, a2, 28, 26, 17, P.teal, P.beamDark));
+  blob(0, -86, 34, 40, P.teal, 1.3, 3, 0.03);                          // overalls body
+  prect(-18, -112, 36, 30, P.tealDark, 0.3, 6);                        // bib
+  pcircle(-10, -104, 3, P.gold, 0); pcircle(10, -104, 3, P.gold, 0);
+  const arms = o.arms || [[0.35 + wk * 0.5, -0.1], [-0.35 - wk * 0.5, 0.1]];
+  arms.forEach(([a1, a2], i) => limb(i ? 28 : -28, -110, a1, a2, 24, 22, 13, P.sage, P.skin2));
+  ctx.save(); ctx.translate(0, -146); ctx.rotate(o.headTilt || 0);
+  pcircle(0, 0, 27, P.skin2, 1.2);
+  paper(() => { ctx.ellipse(0, -10, 31, 21, 0, Math.PI, 0); ctx.closePath(); }, P.mustard, 1);   // hard hat
+  prect(-36, -12, 72, 8, P.mustardDark, 0.6, 4);
+  face(0, 6, 24, o.mood || "happy", o.look || 0);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- the factory set
+const BELT_Y = 1090, FLOOR_Y = 1380, PRESS_X = 560, PED_X = 935, PED_TOP = 1000;
+function sky(t, chaos) {
+  // calm: soft dawn; chaos: dramatic magenta/orange with fast clouds and rays
+  const g = ctx.createLinearGradient(0, 0, 0, 700);
+  g.addColorStop(0, chaos > 0.5 ? "#4a1f4f" : "#f6d9a8"); g.addColorStop(0.55, chaos > 0.5 ? "#c2403f" : "#f8e7c4"); g.addColorStop(1, chaos > 0.5 ? "#ff9a3c" : "#fbefd6");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 760);
+  if (chaos > 0) {
+    ctx.save(); ctx.globalAlpha = 0.18 * chaos; ctx.translate(W / 2, 520); ctx.rotate(t * 0.25);
+    for (let i = 0; i < 14; i++) { ctx.rotate(Math.PI / 7); ctx.fillStyle = "#ffe08a"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1400, -80); ctx.lineTo(1400, 80); ctx.fill(); }
+    ctx.restore();
+  }
+  for (let i = 0; i < 5; i++) {
+    const sp = chaos > 0.5 ? 260 : 18, cx = ((i * 260 + t * sp + hash(i) * 400) % 1500) - 200, cy = 90 + i * 85;
+    blob(cx, cy, 90 + i * 12, 30, chaos > 0.5 ? "#7d3a5c" : "#fff4dd", 0.8, 40 + i, 0.15);
+  }
+}
+function background(t, chaos, roofOpen) {
+  sky(t, chaos);
+  // back wall with windows (sky shows through)
+  paper(() => { ctx.rect(0, 160, W, FLOOR_Y - 160); for (let i = 0; i < 3; i++) ctx.roundRect(420 + i * 210, 250, 150, 230, [75, 75, 8, 8]); }, P.wall, 0.5);
+  ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.0)"; ctx.restore();
+  for (let i = 0; i < 3; i++) { const x = 420 + i * 210; ctx.save(); ctx.strokeStyle = tex(P.wallDark); ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x + 75, 250); ctx.lineTo(x + 75, 480); ctx.moveTo(x, 370); ctx.lineTo(x + 150, 370); ctx.stroke(); ctx.restore(); }
+  for (let i = 0; i < 6; i++) prect(i * 190 - 20, 560 + (i % 2) * 6, 160, 26, P.wallDark, 0.3, 6);      // wall planks
+  // big turning gears on the wall
+  for (const [gx, gy, gr, dir] of [[200, 380, 95, 1], [345, 560, 60, -1]]) gear(gx, gy, gr, t * 0.9 * dir, P.kraftDark);
+  // roof: beams + flaps that fly open in the explosion
+  for (let i = 0; i < 4; i++) {
+    const x0 = i * 270, ang = roofOpen * (i % 2 ? 1 : -1) * (1.2 + i * 0.1), lift = roofOpen * 260;
+    ctx.save(); ctx.translate(x0 + 135, 80 - lift); ctx.rotate(ang);
+    prect(-140, -80, 280, 160, P.beam, 1.5 + roofOpen * 3, 6); prect(-140, 40, 280, 22, P.beamDark, 0.2, 4); ctx.restore();
+  }
+  prect(0, 168, W, 26, P.beamDark, 1.5, 0);                             // crane rail
+}
+function gear(x, y, r, rot, color) {
+  const n = 10, pts = [];
+  for (let i = 0; i < n * 2; i++) { const a = rot + (i * Math.PI) / n, rr = i % 2 ? r : r * 0.8; pts.push([x + Math.cos(a - 0.1) * rr, y + Math.sin(a - 0.1) * rr], [x + Math.cos(a + 0.1) * rr, y + Math.sin(a + 0.1) * rr]); }
+  poly(pts, color, 0.8); pcircle(x, y, r * 0.3, P.wall, 0.4);
+}
+function tank(t, energy) {
+  // the vat of "main character energy" (left), with a glowing window
+  prect(40, 600, 300, 420, P.terracotta, 2, 40);
+  prect(66, 640, 248, 150, P.terraDark, 0.3, 24);
+  const lvl = 0.62 + Math.sin(t * 2) * 0.03;
+  ctx.save(); ctx.beginPath(); ctx.roundRect(80, 650, 220, 130, 18); ctx.clip();
+  ctx.fillStyle = "#5a3220"; ctx.fillRect(80, 650, 220, 130);
+  const g = ctx.createLinearGradient(0, 650, 0, 780); g.addColorStop(0, P.gold); g.addColorStop(1, P.goldDeep);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(80, 780);
+  for (let x = 80; x <= 300; x += 10) ctx.lineTo(x, 650 + 130 * (1 - lvl) + Math.sin(x * 0.05 + t * 4) * 5); ctx.lineTo(300, 780); ctx.fill();
+  for (let i = 0; i < 7; i++) { const by = 780 - ((t * 60 + i * 40) % 110), bx = 100 + hash(i) * 180; ctx.fillStyle = "rgba(255,250,210,0.7)"; ctx.beginPath(); ctx.arc(bx, by, 4 + (i % 3), 0, 7); ctx.fill(); }
+  ctx.restore();
+  glow(190, 715, 150, "rgba(255,204,77,0.55)", 0.6 + energy * 0.4);
+  prect(78, 820, 224, 120, P.cream, 1, 8, -0.02);                      // label
+  label("MAIN CHARACTER", 190, 858, 22, P.terraDark, -0.02);
+  label("ENERGY", 190, 905, 44, P.ink, -0.02);
+  prect(320, 960, 120, 34, P.steelDark, 1, 8);                         // spout
+  for (let i = 0; i < 3; i++) prect(70 + i * 110, 1010, 30, 60, P.beamDark, 0.5, 4);
+}
+function platform() { prect(0, BELT_Y, 330, 40, P.kraftDark, 2, 6); for (let i = 0; i < 3; i++) prect(30 + i * 110, BELT_Y + 40, 24, FLOOR_Y - BELT_Y - 40, P.beamDark, 1, 4); }
+function belt(t, beltPos) {
+  prect(320, BELT_Y, 520, 34, "#5d4a3e", 2, 17);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(320, BELT_Y, 520, 34, 17); ctx.clip();
+  ctx.strokeStyle = "rgba(255,240,210,0.25)"; ctx.lineWidth = 6;
+  for (let x = 320 - 60 + (beltPos % 60); x < 860; x += 60) { ctx.beginPath(); ctx.moveTo(x, BELT_Y + 4); ctx.lineTo(x - 12, BELT_Y + 30); ctx.stroke(); }
+  ctx.restore();
+  for (let i = 0; i < 6; i++) { const rx = 350 + i * 92; pcircle(rx, BELT_Y + 17, 13, P.steel, 0.5);
+    ctx.save(); ctx.translate(rx, BELT_Y + 17); ctx.rotate(beltPos / 13); ctx.fillStyle = P.steelDark; ctx.fillRect(-2, -11, 4, 22); ctx.restore(); }
+  for (const lx of [360, 790]) prect(lx, BELT_Y + 34, 26, FLOOR_Y - BELT_Y - 34, P.beamDark, 1, 4);
+}
+function press(t, headDrop, charge) {
+  // stamping press over the belt: two columns, a top box, and a head that drops
+  prect(PRESS_X - 150, 640, 34, BELT_Y - 640, P.mustardDark, 1.5, 8); prect(PRESS_X + 116, 640, 34, BELT_Y - 640, P.mustardDark, 1.5, 8);
+  prect(PRESS_X - 170, 600, 340, 110, P.mustard, 2, 18);
+  pcircle(PRESS_X - 110, 655, 18, P.terracotta, 0.6); pcircle(PRESS_X + 110, 655, 18, charge > 0.1 ? P.gold : P.sage, 0.6);
+  if (charge > 0.1) glow(PRESS_X + 110, 655, 60, "rgba(255,210,90,0.9)", charge);
+  const hy = 710 + headDrop * 170;
+  prect(PRESS_X - 18, 700, 36, hy - 700 + 6, P.steelDark, 1, 6);                // piston
+  prect(PRESS_X - 95, hy, 190, 70, P.steel, 2, 14);                               // head
+  prect(PRESS_X - 85, hy + 56, 170, 18, charge > 0.1 ? P.gold : P.steelDark, 0.6, 8);   // stamp face
+  if (charge > 0.1) glow(PRESS_X, hy + 70, 130, "rgba(255,204,77,0.9)", charge * 0.9);
+}
+function floorPlanks(t) {
+  prect(0, FLOOR_Y, W, H - FLOOR_Y, P.floor, 0.5, 0);
+  ctx.save(); ctx.strokeStyle = tex(P.floorLine); ctx.lineWidth = 4;
+  for (let y = FLOOR_Y + 90; y < H; y += 110) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  for (let r = 0; r < 6; r++) for (let x = (r % 2) * 140; x < W; x += 280) { const y = FLOOR_Y + r * 110; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 90); ctx.stroke(); }
+  ctx.restore();
+}
+function pedestal(spot) {
+  if (spot > 0) {                                   // spotlight cone from above
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.35 * spot;
+    const g = ctx.createLinearGradient(0, 200, 0, PED_TOP); g.addColorStop(0, "rgba(255,240,190,0)"); g.addColorStop(1, "rgba(255,230,160,0.9)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(PED_X - 30, 210); ctx.lineTo(PED_X + 30, 210); ctx.lineTo(PED_X + 120, PED_TOP + 10); ctx.lineTo(PED_X - 120, PED_TOP + 10); ctx.fill(); ctx.restore();
+  }
+  prect(PED_X - 100, PED_TOP, 200, 34, P.cream, 2, 8);
+  prect(PED_X - 80, PED_TOP + 34, 160, FLOOR_Y - PED_TOP - 74, P.plum, 2, 4);
+  prect(PED_X - 110, FLOOR_Y - 46, 220, 46, P.cream, 2, 8);
+  star(PED_X, PED_TOP + 150, 34, P.gold, 0, 0.8);
+}
+function crane(trolleyX, cableLen, hookOpen, cabMood, cabArm) {
+  prect(trolleyX - 80, 150, 160, 70, P.terracotta, 2, 12);               // trolley + cab
+  prect(trolleyX - 60, 160, 54, 44, P.cream, 0.3, 8);
+  ctx.save(); ctx.beginPath(); ctx.rect(trolleyX - 60, 150, 54, 54); ctx.clip();
+  worker(trolleyX - 33, 250, { s: 0.48, mood: cabMood, arms: cabArm }); ctx.restore();
+  ctx.save(); ctx.strokeStyle = "#3d2b20"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(trolleyX + 30, 220); ctx.lineTo(trolleyX + 30, 220 + cableLen); ctx.stroke(); ctx.restore();
+  const hy = 220 + cableLen; prect(trolleyX + 12, hy, 36, 22, P.steelDark, 1, 6);
+  ctx.save(); ctx.strokeStyle = tex(P.steel); ctx.lineWidth = 9; ctx.lineCap = "round"; ctx.beginPath();
+  ctx.arc(trolleyX + 30, hy + 40, 18, -0.2 - hookOpen, Math.PI + 0.2 + hookOpen, true); ctx.stroke(); ctx.restore();
+  return [trolleyX + 30, hy + 58];
+}
+function jar(x, y, rot, wobble, broken) {
+  if (broken) return;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot + wobble);
+  // origin = bottom-right corner (it tips over to the right)
+  ctx.translate(-120, 0);
+  prect(-120, -360, 240, 360, "#e9f2f0", 1.5, 40);                       // glass body
+  ctx.save(); ctx.beginPath(); ctx.roundRect(-110, -350, 220, 340, 34); ctx.clip();
+  for (let i = 0; i < 9; i++) { const r = rng(i + 3); shield(-70 + r() * 140, -60 - r() * 250, 0.75, (r() - 0.5) * 1.2, 0.6); }
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.roundRect(-96, -320, 26, 240, 13); ctx.fill(); ctx.restore();
+  prect(-130, -400, 260, 54, P.terracotta, 1.6, 12);                     // lid
+  prect(-110, -250, 220, 110, P.cream, 1.2, 8, 0.02);                    // label
+  label("PLOT", 0, -220, 44, P.terraDark, 0.02); label("ARMOR", 0, -170, 44, P.ink, 0.02);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- the story
+const QUEUE = [   // ordinary people waiting on the floor (bottom), each gets a protagonist moment
+  { x: 90, pal: { shirt: P.plum, pants: P.ink, skin: P.skin2, hair: P.terraDark, shoe: P.ink }, hit: 12.35, act: "cape" },
+  { x: 240, pal: { shirt: P.mustard, pants: P.tealDark, skin: P.skin3, hair: P.ink, shoe: P.beamDark }, hit: 12.6, act: "sword" },
+  { x: 390, pal: { shirt: P.rose, pants: P.navy, skin: P.skin, hair: P.mustardDark, shoe: P.ink }, hit: 12.85, act: "kneel" },
+  { x: 590, pal: { shirt: P.sage, pants: P.plum, skin: P.skin2, hair: P.ink, shoe: P.ink }, hit: 13.1, act: "leap" },
+  { x: 725, pal: { shirt: P.teal, pants: P.navy, skin: P.skin, hair: P.ink, shoe: P.ink }, hit: 13.35, act: "walk" },
+];
+const QUEUE_FOOT = 1660;
+const PERSON1 = { pal: { shirt: P.coral, pants: P.navy, skin: P.skin, hair: P.ink, shoe: P.ink } };
+const PERSON2 = { pal: { shirt: P.teal, pants: P.mustardDark, skin: P.skin3, hair: P.terraDark, shoe: P.ink } };
+
+function frame(t) {
+  const BOOM = 11.0, chaos = easeOut(seg(t, 11.9, 12.6)), shrug = seg(t, 17.2, 18.3);
+  // camera: gentle drift, punch-in on impact moments, shake in the explosion
+  const shake = (t > 11 && t < 12.4 ? (1 - seg(t, 11, 12.4)) * 26 : 0) + (t > 3.98 && t < 4.25 ? 8 : 0) + chaos * (t < 17 ? 3 : 1.5);
+  const sx = Math.sin(t * 61) * shake, sy = Math.cos(t * 47) * shake;
+  const push = easeIO(seg(t, 16.9, 17.5)) * (1 - easeIO(seg(t, 18.7, 19.5)));   // close-up on the shrug
+  const zoom = lerp(1.02 + 0.03 * Math.sin(t * 0.3) + 0.05 * easeOut(seg(t, 9.6, 10.9)) * (1 - seg(t, 11, 11.6)), 1.85, push);
+  const focusY = lerp(lerp(H / 2, 1250, easeIO(seg(t, 9.4, 10.6)) * (1 - easeIO(seg(t, 11.2, 12.2)))) + 70 * chaos, 1010, push);
+  const focusX = lerp(W / 2, 300, push);
+  ctx.save(); ctx.fillStyle = P.wall; ctx.fillRect(0, 0, W, H);
+  ctx.translate(W / 2 + sx, H / 2 + sy); ctx.scale(zoom, zoom); ctx.translate(-focusX, -focusY);
+
+  // ---- timeline values
+  const roofOpen = easeOut(seg(t, 11.25, 11.9));
+  background(t, chaos, roofOpen);
+  const beltPos = t * 140 - (t > 3.7 ? Math.min(t - 3.7, 0.9) * 140 : 0) - (t > 8.3 ? Math.min(t - 8.3, 0.9) * 140 : 0);
+  tank(t, 0);
+  floorPlanks(t);
+  pedestal(easeOut(seg(t, 8.4, 8.9)) + chaos);
+  belt(t, beltPos);
+  platform();
+
+  // aura balls rolled by the workers onto the belt, sucked into the press
+  const balls = [{ t0: 0.0, tIn: 2.7 }, { t0: 4.6, tIn: 7.3 }, { t0: 18.6, tIn: 99 }];
+  let charge = 0;
+  balls.forEach((b) => {
+    if (t < b.t0) return;
+    const x = key(t, [[b.t0, 250], [b.t0 + 0.8, 330], [b.tIn, PRESS_X]], (k) => k);
+    const up = easeIn(seg(t, b.tIn, b.tIn + 0.45));
+    if (up >= 1) return;
+    const r = 40 * (1 - up * 0.7), y = BELT_Y - 40 - up * 260;
+    glow(x, y, r * 3, "rgba(255,204,77,0.9)", 0.9);
+    pcircle(x, y, r, P.gold, 1.5);
+    ctx.save(); ctx.translate(x, y); ctx.rotate((x - 250) / 40); ctx.strokeStyle = "rgba(255,250,215,0.9)"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0.3, 2.2); ctx.stroke(); ctx.restore();
+    sparkle(x + Math.sin(t * 7) * r, y - r - 10, 10, 0.8);
+  });
+  // press: charged when a ball goes in, stamps when a person is under it
+  const stamps = [3.95, 8.55];
+  let drop = 0; stamps.forEach((ts) => { drop = Math.max(drop, key(t, [[ts - 0.35, 0], [ts, 1], [ts + 0.2, 1], [ts + 0.65, 0]], (k) => k < 1 ? easeIn(k) : k)); });
+  if ((t > 3.1 && t < 4.0) || (t > 7.7 && t < 8.6)) charge = 1; else if (t >= 4.0 && t < 4.4) charge = 1 - seg(t, 4.0, 4.4); else if (t >= 8.6 && t < 9) charge = 1 - seg(t, 8.6, 9);
+
+  // person 1: rides in, stamped at 3.95, rides to belt end, lifted by crane onto the pedestal
+  const p1Glow = seg(t, 3.95, 4.2);
+  const craneX = key(t, [[0, 960], [4.6, 960], [5.5, 790], [7.0, 790], [7.9, PED_X - 30], [9.4, PED_X - 30], [11, 960]]);
+  const cable = key(t, [[0, 120], [5.5, 120], [6.1, 640], [6.4, 640], [7.0, 360], [7.9, 360], [8.4, 520], [8.8, 520], [9.4, 120]]);
+  const hookOpen = t > 8.4 && t < 9.4 ? 0.5 : 0;
+  let p1x, p1y, p1lift = 0;
+  if (t < 5.6) { p1x = key(t, [[0.9, -60], [3.6, PRESS_X], [4.5, PRESS_X], [5.6, 790]], (k) => k); p1y = BELT_Y; }
+  else if (t < 8.4) { p1x = craneX + 30; p1y = 220 + cable + 58 + 196; p1lift = 1; }
+  else { p1x = PED_X; p1y = PED_TOP; }
+  const p1Hero = t > 8.4;
+  const sway = p1lift ? Math.sin(t * 5) * 0.08 : 0;
+  ctx.save(); ctx.translate(p1x, p1y); ctx.rotate(sway); ctx.translate(-p1x, -p1y);
+  person(p1x, p1y, { glow: p1Glow, palette: PERSON1.pal, t, mood: p1lift ? "happy" : undefined,
+    arms: p1Hero ? (chaos > 0 ? [[-2.6, -2.9], [0.4, 0.9]] : [[0.5, -1.4], [-0.5, 1.4]]) : p1lift ? [[-2.8, -2.9], [2.8, 2.9]] : undefined,
+    cape: p1Hero && chaos > 0 ? 1 : 0, wind: chaos, hairFlip: p1Glow > 0.5 });
+  ctx.restore();
+  // stamp burst
+  for (const ts of stamps) { const k = seg(t, ts, ts + 0.6); if (k > 0 && k < 1) for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2, d = easeOut(k) * 170;
+    sparkle(PRESS_X + Math.cos(a) * d, BELT_Y - 110 + Math.sin(a) * d * 0.7, 18 * (1 - k), 1 - k); } }
+
+  // person 2: second cycle, stamped at 8.55, waits at the belt end, flips hair in the chaos
+  if (t > 5.4) {
+    const p2x = key(t, [[5.4, -60], [8.2, PRESS_X], [9.0, PRESS_X], [9.9, 760]], (k) => k);
+    person(p2x, BELT_Y, { glow: seg(t, 8.55, 8.8), palette: PERSON2.pal, t, wind: chaos, hairFlip: chaos > 0.5,
+      arms: chaos > 0.5 ? [[-2.2, -3.0], [0.3, 1.2]] : undefined, lean: chaos > 0.5 ? -0.08 : 0, mood: chaos > 0.5 ? "proud" : undefined });
+  }
+  press(t, drop, charge);
+  const hook = crane(craneX, cable, hookOpen, t > 8.6 && t < 10 ? "happy" : chaos > 0.5 ? "shock" : "happy",
+    t > 8.6 && t < 9.8 ? [[0.3, 0], [-2.6, -2.9]] : undefined);
+
+  // platform workers: roll balls, watch the chaos, shrug, get back to work
+  const w1Push = (t < 1.0) || (t > 4.6 && t < 5.5) || (t > 18.6);
+  const w1x = w1Push ? (t < 1.0 ? key(t, [[0, 170], [0.8, 250]]) : t < 5.5 ? key(t, [[4.6, 170], [5.4, 250]]) : key(t, [[18.6, 170], [19.4, 250]])) : 190;
+  const lookUp = chaos > 0.3 && shrug < 0.2;
+  const shrugArms = [[-1.05, -2.45], [1.05, 2.45]];
+  const sh = shrug > 0 && t < 18.6;
+  worker(w1x, BELT_Y, { walk: w1Push ? t * 9 : null, mood: sh ? "shrug" : lookUp ? "shock" : "happy", look: lookUp ? 1 : 0,
+    arms: sh ? shrugArms : w1Push ? [[-1.3, -1.5], [-1.1, -1.4]] : undefined, headTilt: sh ? 0.15 : lookUp ? -0.2 : 0 });
+  const w2Look = t > 17.2 && t < 17.7;
+  worker(80, BELT_Y, { flip: w2Look || sh, mood: sh ? "shrug" : lookUp ? "shock" : "happy", arms: sh ? shrugArms : t < 11 ? [[0.3, -1.6], [-0.4, -0.2]] : undefined,
+    look: w2Look ? 1 : 0, headTilt: sh ? -0.15 : 0 });
+
+  // the plank-carrying worker on the floor: admires the pedestal, bumps the jar, freezes, shrugs, goes back to work
+  const jx = 1010, jy = 1820;
+  const tip = easeIn(seg(t, 10.55, 11.0)) * 1.45, wob = t > 9.75 && t < 10.6 ? Math.sin((t - 9.75) * 22) * 0.07 * seg(t, 9.75, 10.2) : 0;
+  const w4x = key(t, [[8.6, 260], [9.75, 560], [9.9, 545], [18.5, 545], [20, 380]]);
+  const walking = (t > 8.6 && t < 9.75) || t > 18.5;
+  const alarmed = t > 9.8 && t < 11.6;
+  if (t > 8.4) {
+    worker(w4x, 1800, { s: 0.95, walk: walking ? t * 8 : null, flip: t > 18.5, look: t < 9.75 ? 1 : 0, headTilt: t < 9.75 ? -0.3 : sh ? 0.12 : 0,
+      mood: alarmed ? "shock" : sh ? "shrug" : t < 9.75 ? "happy" : lookUp ? "shock" : "happy",
+      arms: sh ? shrugArms : alarmed ? [[-2.4, -2.8], [2.4, 2.8]] : [[-1.6, -2.4], [-1.4, -2.2]] });
+    if (!alarmed && !sh) { const px = w4x, py = 1800 - 0.95 * 150;      // plank on the shoulder
+      const dir = t > 18.5 ? -1 : 1; prect(px - (dir > 0 ? 120 : 220), py - 10, 340, 22, P.kraftDark, 1.2, 4); }
+    if (alarmed) { prect(w4x - 150, 1780, 320, 22, P.kraftDark, 0.8, 4, 0.05); label("!", w4x, 1800 - 0.95 * 200 - 40, 90, P.terracotta); }
+  }
+  jar(jx, jy, tip, wob, t >= BOOM);
+
+  // ---- the explosion: flash, shards, plot armor rockets into the sky and bursts
+  if (t >= BOOM) {
+    const k = t - BOOM;
+    for (let i = 0; i < 16; i++) { const r = rng(100 + i); const a = -Math.PI * (0.1 + r() * 0.8), v = 500 + r() * 700;     // glass shards
+      const x = 860 + Math.cos(a) * v * k, y = 1780 + Math.sin(a) * v * k + 900 * k * k; if (y < 1900)
+        poly([[x, y], [x + 30, y + 8], [x + 10, y + 34]].map(([px, py]) => [px, py]), "#dfeeee", 0.5); }
+    for (let i = 0; i < 26; i++) {                                       // shields rocketing up and bursting
+      const r = rng(200 + i), d0 = r() * 0.5, kk = k - d0; if (kk <= 0) continue;
+      const tx = 60 + r() * 960, ty = 260 + r() * 300, fly = easeOut(clamp(kk / 0.9));
+      let x = lerp(880, tx, fly), y = lerp(1700, ty, fly) - Math.sin(fly * Math.PI) * 120;
+      if (kk > 0.9) y -= Math.pow(kk - 0.9, 2) * 2600;                   // then shoot up into the sky
+      if (y < -200) continue;
+      shield(x, y, 0.8 + r() * 0.5, Math.sin(k * 3 + i) * 0.6 + kk * 2, 1.2);
+      if (kk < 1.1) glow(x, y, 70, "rgba(255,210,100,0.8)", 1 - kk / 1.1);
+      if (kk > 0.85 && kk < 1.6) for (let j = 0; j < 8; j++) { const a = (j / 8) * Math.PI * 2, dd = easeOut((kk - 0.85) / 0.75) * 120;
+        star(x + Math.cos(a) * dd, y + Math.sin(a) * dd, 14 * (1.6 - kk), j % 2 ? P.gold : P.coral, k * 4, 0.3); }
+    }
+    QUEUE.forEach((q, i) => { const k2 = seg(t, q.hit - 0.75, q.hit);       // ...and rains back down, one piece per person
+      if (k2 > 0 && k2 < 1) { const y = lerp(-150, QUEUE_FOOT - 230, easeIn(k2)); shield(q.x + Math.sin(k2 * 9 + i) * 30 * (1 - k2), y, 0.9, Math.sin(k2 * 12 + i) * 0.5, 1.2);
+        glow(q.x, y, 90, "rgba(255,210,100,0.8)", 0.8); } });
+    const flash = 1 - seg(t, BOOM, BOOM + 0.5);
+    if (flash > 0) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = flash * 0.85; ctx.fillStyle = "#fff1c9"; ctx.fillRect(-200, -200, W + 400, H + 400); ctx.restore(); }
+    // a beam of golden light from the broken jar to the sky
+    const beam = clamp(1 - seg(t, BOOM + 0.6, BOOM + 2.2));
+    if (beam > 0) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.5 * beam;
+      const g = ctx.createLinearGradient(880, 1800, 700, 0); g.addColorStop(0, "rgba(255,220,120,1)"); g.addColorStop(1, "rgba(255,220,120,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(840, 1800); ctx.lineTo(930, 1800); ctx.lineTo(820, 0); ctx.lineTo(560, 0); ctx.fill(); ctx.restore(); }
+  }
+
+  // ---- the queue of ordinary people, turned into movie protagonists by falling sparkles
+  QUEUE.forEach((q, i) => {
+    const g = seg(t, q.hit, q.hit + 0.25), act = easeOut(seg(t, q.hit + 0.2, q.hit + 1.1));
+    let x = q.x, y = QUEUE_FOOT, o = { glow: g, palette: q.pal, t, wind: chaos, s: 1.05 };
+    if (g < 0.5) { o.look = i % 2 ? 0.5 : -0.3; }
+    else if (q.act === "walk") { x -= act * 60; o.shades = true; o.legs = [[Math.sin(t * 3) * 0.35, 0], [-Math.sin(t * 3) * 0.35, 0]];
+      o.arms = [[Math.sin(t * 3) * 0.3, 0], [-Math.sin(t * 3) * 0.3, 0]];
+      for (let e = 0; e < 3; e++) { const be = q.hit + 0.5 + e * 1.1, kk = seg(t, be, be + 0.9); if (kk > 0 && kk < 1)      // explosions behind (hero doesn't look)
+        { blob(x + 120 + e * 20, y - 120, 70 * easeOut(kk) + 20, 60 * easeOut(kk) + 20, kk < 0.4 ? P.gold : P.terracotta, 0.6, 300 + e, 0.25); glow(x + 120, y - 120, 140, "rgba(255,170,60,0.9)", 1 - kk); } } }
+    else if (q.act === "cape") { o.cape = act; o.arms = [[-2.9 * act, -3.0 * act], [0.4, 0.8]]; o.mood = "determined"; o.headTilt = -0.15; }
+    else if (q.act === "sword") { o.sword = -0.1 + Math.sin(t * 2) * 0.05; o.arms = [[0.3, -0.6], [-2.9 * act, -3.05 * act]]; o.mood = "determined"; }
+    else if (q.act === "kneel") { o.crouch = act; o.legs = [[-1.2 * act, 0.2], [0.9 * act, -0.4 * act]]; o.arms = [[0.2, 0.1], [-2.9 * act, -3.1 * act]]; o.mood = "determined"; o.headTilt = -0.35 * act;
+      for (let d = 0; d < 10; d++) { const r = rng(400 + d), ry = ((t * 900 + r() * 1000) % 600); ctx.save(); ctx.strokeStyle = "rgba(190,215,235,0.55)"; ctx.lineWidth = 3;   // personal rain
+        ctx.beginPath(); ctx.moveTo(x - 90 + r() * 180, y - 420 + ry); ctx.lineTo(x - 98 + r() * 180, y - 390 + ry); ctx.stroke(); ctx.restore(); } }
+    else if (q.act === "leap") { const air = Math.sin(clamp((t - q.hit - 0.3) / 2.6) * Math.PI); y -= Math.max(0, air) * 220; o.cape = 1; o.arms = [[-2.8, -3.0], [-2.5, -2.9]];
+      o.legs = [[0.5, -0.6], [-0.2, 0.4]]; o.mood = "determined"; }
+    person(x, y, o);
+    if (g > 0 && g < 1) for (let j = 0; j < 8; j++) { const a = (j / 8) * Math.PI * 2; sparkle(x + Math.cos(a) * 90 * g, y - 110 + Math.sin(a) * 90 * g, 16, 1 - g); }
+  });
+  // sparkles raining down after the burst
+  if (t > 11.8) for (let i = 0; i < 40; i++) { const r = rng(500 + i), sp = 140 + r() * 160, y = ((t - 11.8) * sp + r() * 1800) % 1900, x = r() * W + Math.sin(t * 2 + i) * 30;
+    sparkle(x, y, 7 + r() * 9, 0.85 * chaos); }
+
+  ctx.restore();   // end camera
+
+  // ---- cinematic overlays (screen space): colour grade, spotlights, wind lines, letterbox, grain
+  if (chaos > 0) {
+    ctx.save(); ctx.globalCompositeOperation = "soft-light"; ctx.globalAlpha = 0.55 * chaos;
+    const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#ff3c78"); g.addColorStop(1, "#ffb21a"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 3; i++) { const a = Math.sin(t * 0.9 + i * 2.1) * 0.5, bx = 180 + i * 360;
+      ctx.save(); ctx.translate(bx, H + 40); ctx.rotate(a); ctx.globalAlpha = 0.16 * chaos;
+      const g2 = ctx.createLinearGradient(0, 0, 0, -H); g2.addColorStop(0, "rgba(255,240,200,1)"); g2.addColorStop(1, "rgba(255,240,200,0)");
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(30, 0); ctx.lineTo(220, -H * 1.2); ctx.lineTo(-220, -H * 1.2); ctx.fill(); ctx.restore(); }
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle = "rgba(255,248,230,0.5)"; ctx.lineCap = "round";
+    for (let i = 0; i < 16; i++) { const r = rng(700 + i), y = 260 + r() * 1400, len = 80 + r() * 200, x = ((t * (900 + r() * 700) + r() * 2000) % 2200) - 300;
+      ctx.lineWidth = 2 + r() * 3; ctx.globalAlpha = chaos * (t < 17 ? 1 : 0.5); ctx.beginPath(); ctx.moveTo(W - x, y); ctx.lineTo(W - x - len, y); ctx.stroke(); }
+    ctx.restore();
+  }
+  const bars = easeIO(seg(t, 12.0, 12.6)) * 120;
+  if (bars > 0) { prect(-20, -20, W + 40, bars + 20, "#1d1512", 2, 0); prect(-20, H - bars, W + 40, bars + 20, "#1d1512", 2, 0); }
+  grain(t);
+}
+let GRAIN = null;
+function grain(t) {
+  if (!GRAIN) { const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d"), img = g.createImageData(512, 512), r = rng(9);
+    for (let i = 0; i < img.data.length; i += 4) { const v = 128 + (r() - 0.5) * 60; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+    g.putImageData(img, 0, 0); GRAIN = ctx.createPattern(c, "repeat"); }
+  ctx.save(); ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = 0.12; ctx.translate((Math.floor(t * 12) * 97) % 512, (Math.floor(t * 12) * 53) % 512);
+  ctx.fillStyle = GRAIN; ctx.fillRect(-512, -512, W + 1024, H + 1024); ctx.restore();
+  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75); v.addColorStop(0, "rgba(40,20,10,0)"); v.addColorStop(1, "rgba(40,20,10,0.35)");
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+}
+
+// contact sheet for checking: draws frames at the given times into one image
+function sheet(times, cols = 4, w = 270) {
+  const h = w * H / W, rows = Math.ceil(times.length / cols), c = document.createElement("canvas"); c.width = cols * w; c.height = rows * (h + 26);
+  const g = c.getContext("2d"); g.fillStyle = "#111"; g.fillRect(0, 0, c.width, c.height);
+  times.forEach((tt, i) => { frame(tt); g.drawImage(cv, (i % cols) * w, Math.floor(i / cols) * (h + 26), w, h);
+    g.fillStyle = "#fff"; g.font = "16px sans-serif"; g.fillText(tt.toFixed(1) + "s", (i % cols) * w + 6, Math.floor(i / cols) * (h + 26) + h + 18); });
+  return c.toDataURL("image/jpeg", 0.85);
+}
+window.film = { frame, sheet, duration: DUR, fps: 30, canvas: cv };
+if (location.search.includes("play")) { const t0 = performance.now(); const tick = () => { frame(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(tick); }; tick(); }
+else frame(0);
+</script>
+</body>
+</html>
